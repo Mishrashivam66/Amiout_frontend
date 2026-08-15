@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Mail, Phone, Building2, BadgeCheck, User } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
-import { updateProfile } from "../services/mentor.service";
+import { Mail, Phone, Building2, BadgeCheck, User } from "lucide-react";
+
+import { updateProfile, updateAvailability } from "../services/mentor.service";
 import toast from "react-hot-toast";
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -35,7 +36,32 @@ const Profile = () => {
       toast.error(error.response?.data?.message || "Unable to update profile.");
     }
   };
+  const handleAvailabilityChange = async () => {
+    try {
+      const newStatus =
+        profile.availabilityStatus === "AVAILABLE"
+          ? "UNAVAILABLE"
+          : "AVAILABLE";
 
+      const res = await updateAvailability(newStatus);
+
+      if (res.success) {
+        const updated = {
+          ...profile,
+          availabilityStatus: newStatus,
+        };
+
+        setProfile(updated);
+        updateUser(updated);
+
+        toast.success(`You are now ${newStatus.toLowerCase()}.`);
+      } else {
+        toast.error(res.message);
+      }
+    } catch {
+      toast.error("Unable to update availability.");
+    }
+  };
   useEffect(() => {
     if (user) {
       setProfile(user);
@@ -61,10 +87,29 @@ const Profile = () => {
           </div>
 
           <div className="ml-auto">
-            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-5 py-2 text-sm font-semibold text-emerald-300">
-              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              Active
-            </span>
+            <button
+              onClick={handleAvailabilityChange}
+              className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition
+
+  ${
+    profile?.availabilityStatus === "AVAILABLE"
+      ? "bg-emerald-500/20 text-emerald-300"
+      : "bg-red-500/20 text-red-300"
+  }
+`}
+            >
+              <div
+                className={`h-2 w-2 rounded-full animate-pulse ${
+                  profile?.availabilityStatus === "AVAILABLE"
+                    ? "bg-emerald-400"
+                    : "bg-red-400"
+                }`}
+              ></div>
+
+              {profile?.availabilityStatus === "AVAILABLE"
+                ? "Available Today"
+                : "Unavailable Today"}
+            </button>
           </div>
         </div>
       </div>
@@ -220,7 +265,15 @@ const Profile = () => {
 
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-5 py-2 font-semibold text-emerald-700">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            Active Account
+            className=
+            {`inline-flex items-center gap-2 rounded-full px-5 py-2 font-semibold
+
+${
+  profile?.availabilityStatus === "AVAILABLE"
+    ? "bg-emerald-100 text-emerald-700"
+    : "bg-red-100 text-red-700"
+}
+`}
           </span>
         </div>
       </div>

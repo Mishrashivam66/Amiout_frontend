@@ -173,6 +173,13 @@ export const unlockStudent = async (studentId) => {
   return response.data;
 };
 
+export const updateAvailability = async (availabilityStatus) => {
+  const response = await api.patch("/mentor/availability", {
+    availabilityStatus,
+  });
+
+  return response.data;
+};
 export default {
   getDashboard,
   getPendingRequests,
@@ -192,4 +199,6 @@ export default {
   markNotificationRead,
 
   getRecentRequests,
+
+  updateAvailability,
 };
