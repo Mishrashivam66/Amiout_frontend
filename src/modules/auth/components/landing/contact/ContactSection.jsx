@@ -1,30 +1,20 @@
-// ============================================================
-// AMIOUT Enterprise Edition
-// ContactSection.jsx
-// ============================================================
-
 import { motion } from "framer-motion";
 import { MessageCircleMore } from "lucide-react";
 
 import ContactInfo from "./ContactInfo";
-import ContactForm from "./ContactForm";
 
 const ContactSection = () => {
   return (
     <section
       id="contact"
-      className="relative overflow-hidden bg-slate-950 py-36"
+      className="relative overflow-hidden bg-slate-950 py-24"
     >
-      {/* ================================================= */}
       {/* Background */}
-      {/* ================================================= */}
 
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" />
 
-      {/* Grid */}
-
       <div
-        className="absolute inset-0 opacity-[0.05]"
+        className="absolute inset-0 opacity-[0.04]"
         style={{
           backgroundImage: `
             linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
@@ -34,81 +24,46 @@ const ContactSection = () => {
         }}
       />
 
-      {/* Glow */}
+      <div className="absolute -left-40 top-0 h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[150px]" />
+      <div className="absolute -right-40 bottom-0 h-[450px] w-[450px] rounded-full bg-violet-500/10 blur-[150px]" />
 
-      <div className="absolute -left-40 top-0 h-[550px] w-[550px] rounded-full bg-cyan-500/15 blur-[160px]" />
-
-      <div className="absolute -right-40 bottom-0 h-[550px] w-[550px] rounded-full bg-violet-500/15 blur-[160px]" />
-
-      {/* ================================================= */}
       {/* Content */}
-      {/* ================================================= */}
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8">
-        {/* ============================================== */}
-        {/* Header */}
-        {/* ============================================== */}
+        {/* Heading */}
 
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 40,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-          }}
-          viewport={{
-            once: true,
-          }}
-          className="mx-auto max-w-5xl text-center"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mx-auto max-w-3xl text-center"
         >
-          {/* Badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-5 py-2">
+            <MessageCircleMore className="h-4 w-4 text-cyan-400" />
 
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-6 py-3 backdrop-blur-xl">
-            <MessageCircleMore className="h-5 w-5 text-cyan-400" />
-
-            <span className="text-sm font-semibold tracking-wide text-cyan-300">
-              CONTACT & COLLABORATION
+            <span className="text-sm font-semibold text-cyan-300">
+              CONTACT US
             </span>
           </div>
 
-          {/* Heading */}
-
-          <h2 className="mt-10 text-5xl font-black leading-tight text-white md:text-7xl">
-            Let's Build
-            <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 bg-clip-text text-transparent">
+          <h2 className="mt-8 text-4xl font-bold md:text-5xl">
+            Get In
+            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               {" "}
-              Smarter Campuses
+              Touch
             </span>
-            <br />
-            Together
           </h2>
 
-          {/* Subtitle */}
-
-          <p className="mx-auto mt-10 max-w-4xl text-xl leading-9 text-slate-400">
-            Whether you're interested in collaborating, discussing innovative
-            ideas, exploring enterprise deployment or simply learning more about
-            AMIOUT, we'd love to hear from you.
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-400">
+            Have questions, suggestions or want to know more about AMIOUT? Feel
+            free to reach out to us.
           </p>
         </motion.div>
 
-        {/* ============================================== */}
-        {/* Main Layout */}
-        {/* ============================================== */}
+        {/* Contact Info */}
 
-        <div className="mt-24 grid items-start gap-12 lg:grid-cols-[420px_1fr]">
-          {/* Contact Information */}
-
+        <div className="mx-auto mt-16 max-w-4xl">
           <ContactInfo />
-
-          {/* Contact Form */}
-
-          <ContactForm />
         </div>
       </div>
     </section>

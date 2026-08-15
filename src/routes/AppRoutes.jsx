@@ -34,7 +34,7 @@ import NotFound from "../components/common/NotFound";
 // ==========================================
 
 import DashboardLayout from "../modules/admin/components/layout/DashboardLayout";
-
+import StudentRegister from "../modules/auth/pages/StudentRegister";
 import AdminDashboard from "../modules/admin/pages/AdminDashboard";
 import Users from "../modules/admin/pages/Users";
 import Imports from "../modules/admin/pages/Imports";
@@ -62,6 +62,7 @@ const AppRoutes = () => {
       <Route path="/" element={<LandingPage />} />
 
       <Route path="/login" element={<Login />} />
+      <Route path="/student/register" element={<StudentRegister />} />
 
       <Route path="/register" element={<Register />} />
       <Route path="/mentor/register" element={<MentorRegister />} />
