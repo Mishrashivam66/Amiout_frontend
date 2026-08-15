@@ -54,11 +54,16 @@ const Profile = () => {
         setProfile(updated);
         updateUser(updated);
 
-        toast.success(`You are now ${newStatus.toLowerCase()}.`);
+        toast.success(
+          newStatus === "AVAILABLE"
+            ? "You are now available."
+            : "You are now unavailable.",
+        );
       } else {
         toast.error(res.message);
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error("Unable to update availability.");
     }
   };
@@ -260,20 +265,27 @@ const Profile = () => {
 
         <div className="mt-10 border-t border-slate-200 pt-8">
           <h3 className="mb-4 text-lg font-semibold text-slate-700">
-            Account Status
+            Today's Availability
           </h3>
 
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-5 py-2 font-semibold text-emerald-700">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            className=
-            {`inline-flex items-center gap-2 rounded-full px-5 py-2 font-semibold
+          <span
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2 font-semibold ${
+              profile?.availabilityStatus === "AVAILABLE"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            <div
+              className={`h-2 w-2 rounded-full animate-pulse ${
+                profile?.availabilityStatus === "AVAILABLE"
+                  ? "bg-emerald-500"
+                  : "bg-red-500"
+              }`}
+            ></div>
 
-${
-  profile?.availabilityStatus === "AVAILABLE"
-    ? "bg-emerald-100 text-emerald-700"
-    : "bg-red-100 text-red-700"
-}
-`}
+            {profile?.availabilityStatus === "AVAILABLE"
+              ? "Available Today"
+              : "Unavailable Today"}
           </span>
         </div>
       </div>
