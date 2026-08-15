@@ -4,7 +4,7 @@
 // File    : StudentSidebar.jsx
 // ==========================================
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import {
   LayoutDashboard,
@@ -66,6 +66,12 @@ const navigation = [
 
 const StudentSidebar = ({ open, setOpen }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <>
@@ -240,30 +246,32 @@ const StudentSidebar = ({ open, setOpen }) => {
 
         {/* Logout */}
 
+        {/* Logout */}
+
         <div
           className="
-            border-t
-            border-white/10
-            p-4
-          "
+    border-t
+    border-white/10
+    p-4
+  "
         >
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="
-              flex
-              w-full
-              items-center
-              justify-center
-              gap-3
-              rounded-xl
-              bg-red-600
-              px-4
-              py-3
-              font-semibold
-              text-white
-              transition
-              hover:bg-red-700
-            "
+      flex
+      w-full
+      items-center
+      justify-center
+      gap-3
+      rounded-xl
+      bg-red-600
+      px-4
+      py-3
+      font-semibold
+      text-white
+      transition
+      hover:bg-red-700
+    "
           >
             <LogOut size={20} />
             Logout
