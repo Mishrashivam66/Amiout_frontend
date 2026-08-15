@@ -26,14 +26,16 @@ const PendingOutpasses = () => {
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    loadRequests();
+  }, []);
   const handleApprove = async (id) => {
     try {
       const response = await approveOutpass(id);
 
       toast.success(response?.message || "Outpass approved successfully.");
 
-      loadRequests();
+      await loadRequests();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to approve outpass.");
     }
@@ -51,7 +53,7 @@ const PendingOutpasses = () => {
 
       toast.success(response?.message || "Outpass rejected successfully.");
 
-      loadRequests();
+      await loadRequests();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to reject outpass.");
     }
