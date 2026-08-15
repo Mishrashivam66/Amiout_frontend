@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   FileText,
-  Download,
   Users,
   CheckCircle2,
   Clock,
@@ -30,12 +29,12 @@ const Reports = () => {
       const res = await getOutpassSummary();
 
       setSummary({
-        total: res.data.total || 0,
-        approved: res.data.approved || 0,
-        pending: res.data.pending || 0,
-        rejected: res.data.rejected || 0,
+        total: res.data.totalOutpasses || 0,
+        approved: res.data.approvedOutpasses || 0,
+        pending: res.data.pendingOutpasses || 0,
+        rejected: res.data.rejectedOutpasses || 0,
       });
-    } catch (error) {
+    } catch {
       toast.error("Failed to load reports.");
     } finally {
       setLoading(false);
