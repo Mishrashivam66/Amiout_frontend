@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "react-toastify";
 
 import outpassService from "../services/outpassService";
@@ -10,13 +10,11 @@ const useOutpass = () => {
   // Apply Outpass
   // ==========================================================================
 
-  const submitOutpass = async (payload) => {
+  const submitOutpass = useCallback(async (payload) => {
     try {
       setLoading(true);
 
-      const response = await outpassService.applyOutpass(payload);
-
-      return response;
+      return await outpassService.applyOutpass(payload);
     } catch (error) {
       console.error("Submit Outpass Error :", error);
 
@@ -30,13 +28,13 @@ const useOutpass = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==========================================================================
   // Active Outpass
   // ==========================================================================
 
-  const fetchActiveOutpass = async () => {
+  const fetchActiveOutpass = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -52,13 +50,13 @@ const useOutpass = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==========================================================================
   // History
   // ==========================================================================
 
-  const fetchHistory = async (page = 1, limit = 10) => {
+  const fetchHistory = useCallback(async (page = 1, limit = 10) => {
     try {
       setLoading(true);
 
@@ -74,13 +72,13 @@ const useOutpass = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==========================================================================
   // Outpass Details
   // ==========================================================================
 
-  const fetchOutpassDetails = async (outpassId) => {
+  const fetchOutpassDetails = useCallback(async (outpassId) => {
     try {
       setLoading(true);
 
@@ -96,13 +94,13 @@ const useOutpass = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==========================================================================
   // Cancel Outpass
   // ==========================================================================
 
-  const cancelOutpass = async (outpassId) => {
+  const cancelOutpass = useCallback(async (outpassId) => {
     try {
       setLoading(true);
 
@@ -126,7 +124,7 @@ const useOutpass = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // ==========================================================================
   // Export
