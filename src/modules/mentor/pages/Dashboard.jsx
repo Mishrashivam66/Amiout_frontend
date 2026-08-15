@@ -64,11 +64,10 @@ const Dashboard = () => {
       {/* Header */}
       <DashboardHeader onRefresh={loadDashboard} />
 
-      {/* Statistics */}
       <DashboardStats data={dashboard} />
 
       {/* Today's Summary */}
-      <TodaySummary data={dashboard} />
+      <TodaySummary summary={dashboard} />
 
       {/* Pending Requests */}
       <PendingOutpassTable onRefresh={loadDashboard} />
