@@ -12,21 +12,26 @@ const PendingOutpasses = () => {
   const [loading, setLoading] = useState(true);
 
   const loadRequests = async () => {
+    console.log("1. loadRequests called");
+
     try {
       setLoading(true);
 
+      console.log("2. Calling API...");
       const response = await getPendingRequests();
+
+      console.log("3. API Response:", response);
 
       setRequests(response.data || []);
     } catch (err) {
-      toast.error(
-        err?.response?.data?.message || "Failed to load pending requests.",
-      );
+      console.error("4. API Error:", err);
     } finally {
+      console.log("5. Loading false");
       setLoading(false);
     }
   };
   useEffect(() => {
+    console.log("Component Mounted");
     loadRequests();
   }, []);
   const handleApprove = async (id) => {
