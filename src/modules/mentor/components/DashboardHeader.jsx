@@ -1,6 +1,6 @@
 import { CalendarDays, RefreshCw, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAuth } from "../../../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 
 const DashboardHeader = ({ onRefresh }) => {
   const [time, setTime] = useState(new Date());
