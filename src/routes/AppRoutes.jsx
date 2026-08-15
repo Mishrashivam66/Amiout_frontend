@@ -46,6 +46,7 @@ import MentorLogin from "../modules/auth/mentor-login/MentorLogin";
 import MentorDashboard from "../modules/mentor/pages/Dashboard";
 import StudentRoutes from "../modules/student/routes/studentRoutes";
 import Outpasses from "../modules/admin/pages/Outpasses";
+import Notifications from "../modules/admin/pages/Notifications";
 // ==========================================
 
 // ROUTES
@@ -100,6 +101,7 @@ const AppRoutes = () => {
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
         <Route path="outpasses" element={<Outpasses />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
 
       {MentorRoutes}
