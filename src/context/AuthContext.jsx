@@ -4,7 +4,7 @@
 // ==========================================
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
-
+import { useNavigate } from "react-router-dom";
 import { getProfile as getStudentProfile } from "../modules/auth/services/auth.service";
 import { getAdminProfile } from "../modules/auth/services/adminAuth.service";
 import { getProfile as getMentorProfile } from "../modules/mentor/services/mentor.service";
@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("accessToken"));
 
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate();
   // ==========================================
   // AUTO LOGIN
   // ==========================================
@@ -113,6 +113,10 @@ export const AuthProvider = ({ children }) => {
 
     setUser(null);
     setToken(null);
+
+    toast.success("Logged out successfully");
+
+    navigate("/login", { replace: true });
   };
   // ==========================================
   // UPDATE USER

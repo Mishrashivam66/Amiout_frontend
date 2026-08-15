@@ -2,43 +2,7 @@ import { Activity, CheckCircle2, XCircle, Clock3, User } from "lucide-react";
 
 const RecentActivity = ({ activities = [] }) => {
   // ============================================================
-  // Empty State
-  // ============================================================
-
-  if (!activities.length) {
-    return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-2xl bg-blue-100 p-3">
-            <Activity size={24} className="text-blue-600" />
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">
-              Recent Activity
-            </h2>
-
-            <p className="text-sm text-slate-500">Latest mentor activities</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center justify-center py-12">
-          <Activity size={56} className="mb-4 text-slate-300" />
-
-          <h3 className="text-lg font-semibold text-slate-700">
-            No Recent Activity
-          </h3>
-
-          <p className="mt-2 text-center text-sm text-slate-500">
-            Recent approvals, rejections and requests will appear here.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ============================================================
-  // Icon Helper
+  // Status Icon
   // ============================================================
 
   const getIcon = (status) => {
@@ -54,6 +18,10 @@ const RecentActivity = ({ activities = [] }) => {
     }
   };
 
+  // ============================================================
+  // Status Badge
+  // ============================================================
+
   const getBadge = (status) => {
     switch (status) {
       case "APPROVED":
@@ -68,37 +36,117 @@ const RecentActivity = ({ activities = [] }) => {
   };
 
   // ============================================================
-  // UI
+  // Empty State
+  // ============================================================
+
+  if (!activities.length) {
+    return (
+      <div
+        className="
+          rounded-2xl
+          md:rounded-3xl
+          border
+          border-slate-200
+          bg-white
+          p-5
+          md:p-6
+          shadow-sm
+        "
+      >
+        {/* Header */}
+
+        <div className="mb-6 flex items-center gap-3">
+          <div className="rounded-xl bg-blue-100 p-3">
+            <Activity size={22} className="text-blue-600" />
+          </div>
+
+          <div>
+            <h2 className="text-lg md:text-xl font-bold text-slate-800">
+              Recent Activity
+            </h2>
+
+            <p className="text-xs md:text-sm text-slate-500">
+              Latest mentor activities
+            </p>
+          </div>
+        </div>
+
+        {/* Empty Content */}
+
+        <div className="flex flex-col items-center justify-center py-10 md:py-14">
+          <div className="rounded-full bg-slate-100 p-5">
+            <Activity size={48} className="text-slate-400" />
+          </div>
+
+          <h3 className="mt-5 text-lg md:text-xl font-semibold text-slate-700">
+            No Recent Activity
+          </h3>
+
+          <p
+            className="
+              mt-3
+              max-w-sm
+              text-center
+              text-sm
+              leading-relaxed
+              text-slate-500
+            "
+          >
+            Recent approvals, rejections and pending outpass requests will
+            automatically appear here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // Main UI
   // ============================================================
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div
+      className="
+        rounded-2xl
+        md:rounded-3xl
+        border
+        border-slate-200
+        bg-white
+        p-5
+        md:p-6
+        shadow-sm
+      "
+    >
       {/* Header */}
 
       <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-2xl bg-blue-100 p-3">
-          <Activity size={24} className="text-blue-600" />
+        <div className="rounded-xl bg-blue-100 p-3">
+          <Activity size={22} className="text-blue-600" />
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Recent Activity</h2>
+          <h2 className="text-lg md:text-xl font-bold text-slate-800">
+            Recent Activity
+          </h2>
 
-          <p className="text-sm text-slate-500">Latest mentor actions</p>
+          <p className="text-xs md:text-sm text-slate-500">
+            Latest mentor actions
+          </p>
         </div>
       </div>
 
       {/* Timeline */}
 
-      <div className="space-y-5">
+      <div className="space-y-4 md:space-y-5">
         {activities.map((item, index) => (
-          <div key={item._id || index} className="relative flex gap-4">
-            {/* Timeline */}
+          <div key={item._id || index} className="relative flex gap-3 md:gap-4">
+            {/* Timeline Line */}
 
             {index !== activities.length - 1 && (
               <div className="absolute left-5 top-12 h-full w-0.5 bg-slate-200" />
             )}
 
-            {/* Icon */}
+            {/* Status Icon */}
 
             <div
               className="
@@ -107,6 +155,7 @@ const RecentActivity = ({ activities = [] }) => {
                 flex
                 h-10
                 w-10
+                shrink-0
                 items-center
                 justify-center
                 rounded-full
@@ -133,32 +182,47 @@ const RecentActivity = ({ activities = [] }) => {
                 hover:shadow-md
               "
             >
-              {/* Student */}
+              {/* Student Info */}
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="
+                      flex
+                      h-10
+                      w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-blue-100
+                    "
+                  >
                     <User size={18} className="text-blue-600" />
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold text-slate-800">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-slate-800 md:text-base">
                       {item.student?.name || "Student"}
                     </h3>
 
-                    <p className="text-xs text-slate-500">
-                      {item.student?.enrollmentNo}
+                    <p className="truncate text-xs text-slate-500">
+                      {item.student?.enrollmentNo || "N/A"}
                     </p>
                   </div>
                 </div>
 
                 <span
                   className={`
+                    inline-flex
+                    w-fit
+                    items-center
                     rounded-full
                     px-3
                     py-1
-                    text-xs
+                    text-[11px]
                     font-semibold
+                    sm:text-xs
                     ${getBadge(item.status)}
                   `}
                 >
@@ -169,33 +233,76 @@ const RecentActivity = ({ activities = [] }) => {
               {/* Reason */}
 
               <div className="mt-4">
-                <p className="text-sm text-slate-700">{item.reason}</p>
+                <p className="text-xs font-medium text-slate-500">Reason</p>
+
+                <p className="mt-1 break-words text-sm leading-6 text-slate-700">
+                  {item.reason}
+                </p>
               </div>
 
               {/* Footer */}
 
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  Destination :
-                  <span className="ml-1 font-medium">{item.destination}</span>
-                </span>
+              <div
+                className="
+                  mt-4
+                  flex
+                  flex-col
+                  gap-2
+                  border-t
+                  border-slate-200
+                  pt-3
+                  text-xs
+                  text-slate-500
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
+                <div className="break-words">
+                  <span className="font-semibold text-slate-600">
+                    Destination :
+                  </span>
 
-                <span className="text-xs text-slate-500">
+                  <span className="ml-1">{item.destination || "-"}</span>
+                </div>
+
+                <div className="text-left sm:text-right">
                   {item.updatedAt
-                    ? new Date(item.updatedAt).toLocaleString()
-                    : ""}
-                </span>
+                    ? new Date(item.updatedAt).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "-"}
+                </div>
               </div>
             </div>
           </div>
         ))}
       </div>
-
       {/* Footer */}
 
-      <div className="mt-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-center text-white">
-        <p className="text-sm">
+      <div
+        className="
+          mt-6
+          rounded-2xl
+          bg-gradient-to-r
+          from-blue-600
+          to-indigo-600
+          p-4
+          text-center
+          text-white
+        "
+      >
+        <p className="text-xs sm:text-sm">
           Showing the latest mentor activities and outpass actions.
+        </p>
+
+        <p className="mt-1 text-[11px] sm:text-xs text-blue-100">
+          Activities are updated automatically whenever you approve or reject an
+          outpass request.
         </p>
       </div>
     </div>

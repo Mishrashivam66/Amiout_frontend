@@ -1,19 +1,13 @@
-
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Users, ClipboardList, CheckCircle2, XCircle } from "lucide-react";
 
 import mentorService from "../services/mentor.service";
 
 import DashboardHeader from "../components/DashboardHeader";
-import WelcomeCard from "../components/WelcomeCard";
-import StatsCards from "../components/StatsCards";
+import DashboardStats from "../components/DashboardStats";
 import TodaySummary from "../components/TodaySummary";
-import DashboardChart from "../components/DashboardChart";
-import RecentRequests from "../components/RecentRequests";
 import PendingOutpassTable from "../components/PendingOutpassTable";
 import RecentActivity from "../components/RecentActivity";
-import QuickActions from "../components/QuickActions";
 import EmptyState from "../components/EmptyState";
 
 const Dashboard = () => {
@@ -66,78 +60,25 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <DashboardHeader />
+    <div className="space-y-5 md:space-y-6">
+      {/* Header */}
+      <DashboardHeader onRefresh={loadDashboard} />
 
-      <WelcomeCard />
+      {/* Statistics */}
+      <DashboardStats data={dashboard} />
 
-      {/* ================= Statistics ================= */}
-
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <StatsCards
-          title="Students"
-          value={dashboard.totalStudents}
-          subtitle="Assigned Students"
-          icon={Users}
-          color="blue"
-        />
-
-        <StatsCards
-          title="Pending"
-          value={dashboard.pendingOutpasses}
-          subtitle="Waiting Approval"
-          icon={ClipboardList}
-          color="yellow"
-        />
-
-        <StatsCards
-          title="Approved"
-          value={dashboard.approvedToday}
-          subtitle="Approved Requests"
-          icon={CheckCircle2}
-          color="green"
-        />
-
-        <StatsCards
-          title="Rejected"
-          value={dashboard.rejectedToday}
-          subtitle="Rejected Requests"
-          icon={XCircle}
-          color="red"
-        />
-      </div>
-
-      {/* ================= Summary ================= */}
-
+      {/* Today's Summary */}
       <TodaySummary data={dashboard} />
 
-      {/* ================= Main Grid ================= */}
+      {/* Pending Requests */}
+      <PendingOutpassTable onRefresh={loadDashboard} />
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        {/* Left */}
+      {/* Recent Activity */}
+      {dashboard.recentActivities?.length > 0 && (
+        <RecentActivity activities={dashboard.recentActivities} />
+      )}
 
-        <div className="space-y-6 xl:col-span-2">
-          <RecentRequests
-            requests={dashboard.recentRequests || []}
-            onRefresh={loadDashboard}
-          />
-
-          <PendingOutpassTable onRefresh={loadDashboard} />
-
-          <DashboardChart data={dashboard} />
-        </div>
-
-        {/* Right */}
-
-        <div className="space-y-6">
-          <RecentActivity activities={dashboard.recentActivities || []} />
-
-          <QuickActions />
-        </div>
-      </div>
-
-      {/* Empty */}
-
+      {/* Empty State */}
       {dashboard.totalStudents === 0 &&
         dashboard.pendingOutpasses === 0 &&
         dashboard.approvedToday === 0 &&

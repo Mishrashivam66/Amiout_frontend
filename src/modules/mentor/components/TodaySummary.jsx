@@ -47,37 +47,66 @@ const TodaySummary = ({
   ];
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 p-6">
-        <h2 className="text-xl font-bold text-slate-800">Today's Summary</h2>
+    <div className="rounded-2xl md:rounded-3xl border border-slate-200 bg-white shadow-sm">
+      {/* Header */}
+      <div className="border-b border-slate-100 px-5 py-4 md:px-6 md:py-5">
+        <h2 className="text-lg md:text-xl font-bold text-slate-800">
+          Today's Summary
+        </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-xs md:text-sm text-slate-500">
           Quick overview of today's mentor activity.
         </p>
       </div>
 
-      <div className="grid gap-5 p-6 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Cards */}
+      <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4 md:p-6">
         {cards.map((card) => {
           const Icon = card.icon;
 
           return (
             <div
               key={card.title}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-all hover:-translate-y-1 hover:shadow-lg"
+              className="
+                rounded-2xl
+                border
+                border-slate-200
+                bg-slate-50
+                p-4
+                md:p-5
+                transition-all
+                duration-300
+                hover:-translate-y-1
+                hover:bg-white
+                hover:shadow-lg
+              "
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">{card.title}</p>
+                <div className="min-w-0">
+                  <p className="text-xs md:text-sm text-slate-500">
+                    {card.title}
+                  </p>
 
-                  <h3 className="mt-3 text-3xl font-bold text-slate-800">
+                  <h3 className="mt-2 text-2xl md:text-3xl font-bold text-slate-800">
                     {card.value}
                   </h3>
                 </div>
 
                 <div
-                  className={`flex h-14 w-14 items-center justify-center rounded-2xl ${card.bg}`}
+                  className={`
+                    flex
+                    h-12
+                    w-12
+                    md:h-14
+                    md:w-14
+                    items-center
+                    justify-center
+                    rounded-xl
+                    md:rounded-2xl
+                    ${card.bg}
+                  `}
                 >
-                  <Icon size={28} className={card.color} />
+                  <Icon size={24} className={card.color} />
                 </div>
               </div>
             </div>

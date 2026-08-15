@@ -1,10 +1,10 @@
-import { Bell, LogOut, Menu, Search, ChevronDown } from "lucide-react";
-
+import { Bell, Menu, Search, ChevronDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
 
 const MentorNavbar = ({ onMenuClick }) => {
-  const { user, logout } = useAuth();
-
+  const { user } = useAuth();
+  const navigate = useNavigate();
   return (
     <header
       className="
@@ -82,21 +82,22 @@ const MentorNavbar = ({ onMenuClick }) => {
         <div className="flex items-center gap-3 md:gap-5">
           {/* Notification */}
           <button
+            onClick={() => navigate("/mentor/notifications")}
             className="
-              relative
-              h-11
-              w-11
-              rounded-2xl
-              border
-              border-slate-200
-              bg-white
-              flex
-              items-center
-              justify-center
-              hover:bg-blue-50
-              hover:border-blue-300
-              transition
-            "
+    relative
+    h-11
+    w-11
+    rounded-2xl
+    border
+    border-slate-200
+    bg-white
+    flex
+    items-center
+    justify-center
+    hover:bg-blue-50
+    hover:border-blue-300
+    transition
+  "
           >
             <Bell size={20} />
 
@@ -166,32 +167,6 @@ const MentorNavbar = ({ onMenuClick }) => {
 
             <ChevronDown size={18} className="text-slate-400" />
           </div>
-
-          {/* Logout */}
-          <button
-            onClick={logout}
-            className="
-              h-11
-              rounded-2xl
-              bg-gradient-to-r
-              from-red-500
-              to-red-600
-              px-5
-              text-white
-              flex
-              items-center
-              gap-2
-              font-medium
-              shadow-lg
-              shadow-red-200
-              hover:scale-105
-              transition
-            "
-          >
-            <LogOut size={18} />
-
-            <span className="hidden lg:block">Logout</span>
-          </button>
         </div>
       </div>
     </header>

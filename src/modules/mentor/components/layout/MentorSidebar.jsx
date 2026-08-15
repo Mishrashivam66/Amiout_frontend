@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 
 import { useAuth } from "../../../../context/AuthContext";
@@ -80,7 +81,7 @@ const MentorSidebar = () => {
               items-center
               justify-center
               rounded-2xl
-              bg-gradient-to-r
+              bg-linear-to-r
               from-blue-500
               to-cyan-400
               shadow-lg
@@ -234,6 +235,52 @@ const MentorSidebar = () => {
       {/* ====================================================== */}
       {/* Bottom Section */}
       {/* ====================================================== */}
+      {/* ====================================================== */}
+      {/* Bottom Section */}
+      {/* ====================================================== */}
+
+      <div className="border-t border-slate-800 p-4">
+        {/* User Info */}
+        {!collapsed && (
+          <div className="mb-4 rounded-2xl bg-slate-800/60 p-4">
+            <p className="truncate text-sm font-semibold text-white">
+              {user?.name || "Mentor"}
+            </p>
+
+            <p className="truncate text-xs text-slate-400">{user?.email}</p>
+          </div>
+        )}
+
+        {/* Logout */}
+        <button
+          onClick={logout}
+          className={`
+            flex
+            w-full
+            items-center
+            ${collapsed ? "justify-center" : "justify-start gap-3"}
+            rounded-2xl
+            bg-gradient-to-r
+            from-red-500
+            to-red-600
+            px-4
+            py-3
+            text-white
+            font-medium
+            shadow-lg
+            shadow-red-900/20
+            transition-all
+            duration-300
+            hover:scale-[1.02]
+            hover:from-red-600
+            hover:to-red-700
+          `}
+        >
+          <LogOut size={20} />
+
+          {!collapsed && <span>Logout</span>}
+        </button>
+      </div>
     </>
   );
   return (
