@@ -1,4 +1,4 @@
-
+import { useNavigate } from "react-router-dom";
 import {
   FaBullhorn,
   FaChartBar,
@@ -11,40 +11,46 @@ import {
 
 const actions = [
   {
-    title: "Import Students",
-    subtitle: "Upload Student Excel",
+    title: "Students",
+    subtitle: "Manage Students",
     icon: FaUsers,
     color: "green",
+    path: "/admin/students",
   },
   {
-    title: "Import Mentors",
-    subtitle: "Upload Mentor Excel",
+    title: "Mentors",
+    subtitle: "Manage Mentors",
     icon: FaUserGraduate,
     color: "blue",
+    path: "/admin/mentors",
   },
   {
-    title: "Generate Reports",
-    subtitle: "Export PDF & Excel",
+    title: "Reports",
+    subtitle: "View Reports",
     icon: FaChartBar,
     color: "purple",
+    path: "/admin/reports",
   },
   {
-    title: "Broadcast Notice",
-    subtitle: "Send Announcement",
+    title: "Users",
+    subtitle: "Manage Users",
     icon: FaBullhorn,
     color: "orange",
+    path: "/admin/users",
   },
   {
-    title: "Import Data",
-    subtitle: "Academic Master",
+    title: "Groups",
+    subtitle: "Manage Groups",
     icon: FaFileImport,
     color: "cyan",
+    path: "/admin/groups",
   },
   {
     title: "Settings",
-    subtitle: "Manage System",
+    subtitle: "System Settings",
     icon: FaCog,
     color: "red",
+    path: "/admin/settings",
   },
 ];
 
@@ -87,6 +93,7 @@ const colorTheme = {
 };
 
 const QuickActions = () => {
+  const navigate = useNavigate();
   return (
     <div
       className="
@@ -129,6 +136,7 @@ const QuickActions = () => {
           return (
             <button
               key={action.title}
+              onClick={() => navigate(action.path)}
               className={`
                 group
                 rounded-2xl

@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, useState } from "react";
-
+import { useNavigate } from "react-router-dom";
 import {
   FaBars,
   FaBell,
@@ -14,8 +13,8 @@ import { toast } from "react-hot-toast";
 
 const Navbar = ({ openSidebar }) => {
   // ============================================================================
-// States
-// ============================================================================
+  // States
+  // ============================================================================
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -23,15 +22,12 @@ const Navbar = ({ openSidebar }) => {
 
   const [notificationCount] = useState(4);
 
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("theme") === "dark";
-  });
-
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   // ============================================================================
-// Live Time
-// ============================================================================
+  // Live Time
+  // ============================================================================
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -42,8 +38,8 @@ const Navbar = ({ openSidebar }) => {
   }, []);
 
   // ============================================================================
-// Close Dropdown Outside Click
-// ============================================================================
+  // Close Dropdown Outside Click
+  // ============================================================================
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,8 +56,8 @@ const Navbar = ({ openSidebar }) => {
   }, []);
 
   // ============================================================================
-// Fullscreen
-// ============================================================================
+  // Fullscreen
+  // ============================================================================
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -76,8 +72,8 @@ const Navbar = ({ openSidebar }) => {
   };
 
   // ============================================================================
-// Logout
-// ============================================================================
+  // Logout
+  // ============================================================================
 
   const handleLogout = () => {
     toast.success("Logout Successfully");
@@ -223,19 +219,20 @@ const Navbar = ({ openSidebar }) => {
           {/* ====================================================== */}
 
           <button
+            onClick={() => navigate("/admin/notifications")}
             className="
-              relative
-              rounded-xl
-              border
-              border-[#223447]
-              bg-[#122131]
-              p-3
-              text-slate-300
-              transition-all
-              duration-300
-              hover:border-green-500
-              hover:text-green-400
-            "
+    relative
+    rounded-xl
+    border
+    border-[#223447]
+    bg-[#122131]
+    p-3
+    text-slate-300
+    transition-all
+    duration-300
+    hover:border-green-500
+    hover:text-green-400
+  "
           >
             <FaBell />
 

@@ -8,6 +8,7 @@ import Imports from "../pages/Imports";
 import Reports from "../pages/Reports";
 import Settings from "../pages/Settings";
 import MentorList from "../pages/Mentors/MentorList";
+import Notifications from "../pages/Notifications";
 
 const AdminRoutes = () => {
   return (
@@ -20,6 +21,10 @@ const AdminRoutes = () => {
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
         <Route path="outpasses" element={<Outpasses />} />
+
+        {/* Notifications */}
+        <Route path="notifications" element={<Notifications />} />
+
         <Route path="test" element={<h1 className="text-5xl">TEST PAGE</h1>} />
       </Route>
     </Routes>

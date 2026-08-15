@@ -1,4 +1,3 @@
-
 import {
   FaCheckCircle,
   FaClipboardList,
@@ -16,7 +15,7 @@ const DashboardStats = ({ dashboard }) => {
   const stats = [
     {
       title: "Total Students",
-      value: dashboard?.totalStudents || 0,
+      value: dashboard?.students?.total || 0,
       icon: FaUsers,
       color: "green",
       percentage: "+12%",
@@ -25,7 +24,7 @@ const DashboardStats = ({ dashboard }) => {
 
     {
       title: "Total Mentors",
-      value: dashboard?.totalMentors || 0,
+      value: dashboard?.mentors?.total || 0,
       icon: FaUserGraduate,
       color: "blue",
       percentage: "+4%",
@@ -34,7 +33,7 @@ const DashboardStats = ({ dashboard }) => {
 
     {
       title: "Groups",
-      value: dashboard?.totalGroups || 0,
+      value: dashboard?.groups?.total || 0,
       icon: FaLayerGroup,
       color: "purple",
       percentage: "+2%",
@@ -43,7 +42,7 @@ const DashboardStats = ({ dashboard }) => {
 
     {
       title: "Outpasses",
-      value: dashboard?.totalOutpasses || 0,
+      value: dashboard?.outpasses?.total || 0,
       icon: FaClipboardList,
       color: "cyan",
       percentage: "+18%",
@@ -52,7 +51,7 @@ const DashboardStats = ({ dashboard }) => {
 
     {
       title: "Pending",
-      value: dashboard?.pendingOutpasses || 0,
+      value: dashboard?.outpasses?.pending || 0,
       icon: FaUserShield,
       color: "orange",
       percentage: "Live",
@@ -61,16 +60,16 @@ const DashboardStats = ({ dashboard }) => {
 
     {
       title: "Approved",
-      value: dashboard?.approvedOutpasses || 0,
+      value: dashboard?.outpasses?.approved || 0,
       icon: FaCheckCircle,
       color: "green",
-      percentage: "Today",
+      percentage: "Latest",
       description: "Approved Requests",
     },
 
     {
       title: "Rejected",
-      value: dashboard?.rejectedOutpasses || 0,
+      value: dashboard?.outpasses?.rejected || 0,
       icon: FaTimesCircle,
       color: "red",
       percentage: "Latest",
@@ -78,12 +77,12 @@ const DashboardStats = ({ dashboard }) => {
     },
 
     {
-      title: "Outside Campus",
-      value: dashboard?.outsideCampus || 0,
+      title: "Returned",
+      value: dashboard?.outpasses?.returned || 0,
       icon: FaDoorOpen,
       color: "blue",
-      percentage: "Live",
-      description: "Students Outside",
+      percentage: "Latest",
+      description: "Returned Students",
     },
   ];
 
