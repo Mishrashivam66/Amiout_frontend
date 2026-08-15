@@ -5,7 +5,7 @@ import api from "../../../services/api";
 // ============================================================================
 
 export const getOutpassSummary = async () => {
-  const { data } = await api.get("/reports/outpasses/summary");
+  const { data } = await api.get("/admin/reports/outpasses/summary");
   return data;
 };
 
@@ -14,7 +14,7 @@ export const getOutpassSummary = async () => {
 // ============================================================================
 
 export const getOutpassStatusReport = async () => {
-  const { data } = await api.get("/reports/outpasses/status");
+  const { data } = await api.get("/admin/reports/outpasses/status");
   return data;
 };
 
@@ -28,7 +28,7 @@ export const getOutpassDetailedReport = async (
   search = "",
   status = "",
 ) => {
-  const { data } = await api.get("/reports/outpasses", {
+  const { data } = await api.get("/admin/reports/outpasses", {
     params: {
       page,
       limit,
@@ -45,7 +45,7 @@ export const getOutpassDetailedReport = async (
 // ============================================================================
 
 export const getOutpassMonthlyReport = async (year) => {
-  const { data } = await api.get("/reports/outpasses/monthly", {
+  const { data } = await api.get("/admin/reports/outpasses/monthly", {
     params: {
       year,
     },
