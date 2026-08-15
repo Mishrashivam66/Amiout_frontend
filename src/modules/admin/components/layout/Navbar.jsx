@@ -20,7 +20,7 @@ const Navbar = ({ openSidebar }) => {
 
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const [notificationCount] = useState(4);
+  const [notificationCount] = useState();
 
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
