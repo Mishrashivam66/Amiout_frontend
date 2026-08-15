@@ -31,14 +31,14 @@ const Notifications = () => {
 
       const res = await getNotifications(page, 10);
 
-      setNotifications(res.data.notifications || []);
+      setNotifications(res.notifications || []);
 
       setPagination({
-        page: res.data.page,
-        totalPages: res.data.totalPages,
-        total: res.data.total,
+        page: res.page,
+        totalPages: res.totalPages,
+        total: res.total,
       });
-    } catch (err) {
+    } catch {
       toast.error("Failed to load notifications.");
     } finally {
       setLoading(false);

@@ -24,6 +24,7 @@ const OutpassDetails = () => {
 
   const [outpass, setOutpass] = useState(null);
 
+  const [showGateMessage, setShowGateMessage] = useState(true);
   // ==========================================================
   // Load Outpass
   // ==========================================================
@@ -312,10 +313,18 @@ const OutpassDetails = () => {
               Your outpass has been approved by the mentor. Before leaving the
               campus, this outpass must be verified at the main gate.
             </p>
+            {showGateMessage && (
+              <div className="rounded-3xl border bg-white p-8">
+                {/* Existing Content */}
 
-            <button className="mt-8 rounded-xl bg-green-600 px-10 py-3 font-semibold text-white transition hover:bg-green-700">
-              ✅ OK
-            </button>
+                <button
+                  onClick={() => setShowGateMessage(false)}
+                  className="mt-8 rounded-xl bg-green-600 px-10 py-3 font-semibold text-white transition hover:bg-green-700"
+                >
+                  ✅ OK
+                </button>
+              </div>
+            )}
 
             <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-center">
               <p className="font-semibold text-red-700">
