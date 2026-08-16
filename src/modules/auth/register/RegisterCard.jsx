@@ -172,19 +172,19 @@ const RegisterCard = () => {
       toast.success(response?.message || "OTP sent successfully.");
 
       navigate("/verify-otp", {
-        replace: true,
         state: {
           email: formData.email,
-          purpose: "register",
+          purpose: "REGISTER",
         },
       });
     } catch (error) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Registration failed. Please try again.";
+      console.log("FULL ERROR:", error);
+      console.log("RESPONSE:", error.response);
+      console.log("DATA:", error.response?.data);
 
-      toast.error(message);
+      toast.error(
+        error.response?.data?.message || error.message || "Registration failed",
+      );
     } finally {
       setLoading(false);
     }
