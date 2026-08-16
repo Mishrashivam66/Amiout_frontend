@@ -170,8 +170,14 @@ const RegisterCard = () => {
 
       const response = await register(payload);
 
-      toast.success(response?.message || "Registration successful!");
-      navigate("/login", { replace: true });
+      toast.success(response?.message || "OTP sent successfully.");
+
+      navigate("/verify-otp", {
+        replace: true,
+        state: {
+          email: formData.email,
+        },
+      });
     } catch (error) {
       const message =
         error?.response?.data?.message ||
