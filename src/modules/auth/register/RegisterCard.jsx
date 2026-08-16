@@ -158,16 +158,15 @@ const RegisterCard = () => {
 
     try {
       const payload = {
-        fullName: formData.fullName,
+        name: formData.fullName,
         email: formData.email,
-        enrollmentNumber: formData.enrollment,
-        mobile: formData.mobile,
-        department: formData.department,
-        year: formData.year,
+        enrollmentNo: formData.enrollment,
+        mobileNumber: formData.mobile,
+        course: formData.department,
+        branch: formData.year,
         semester: formData.semester,
         password: formData.password,
       };
-
       const response = await register(payload);
 
       toast.success(response?.message || "OTP sent successfully.");
@@ -176,6 +175,7 @@ const RegisterCard = () => {
         replace: true,
         state: {
           email: formData.email,
+          purpose: "register",
         },
       });
     } catch (error) {
