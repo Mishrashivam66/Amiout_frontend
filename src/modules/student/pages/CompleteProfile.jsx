@@ -30,6 +30,8 @@ const CompleteProfile = () => {
 
     group: "",
 
+    mentorEmail: "",
+
     parentName: "",
 
     parentEmail: "",
@@ -164,6 +166,15 @@ const CompleteProfile = () => {
               name="group"
               placeholder="Example: C1"
               value={formData.group}
+              onChange={handleChange}
+            />
+            <InputField
+              icon={Mail}
+              label="Mentor Email"
+              name="mentorEmail"
+              type="email"
+              placeholder="mentor@gwa.amity.edu"
+              value={formData.mentorEmail}
               onChange={handleChange}
             />
           </div>
