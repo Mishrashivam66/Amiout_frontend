@@ -1,4 +1,3 @@
-
 import api from "../../../services/api";
 
 // ============================================================================
@@ -34,7 +33,7 @@ export const importMentors = async (file) => {
     },
   });
 
-  return response.data;
+  return response.data.data;
 };
 
 // ============================================================================
