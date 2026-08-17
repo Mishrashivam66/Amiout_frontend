@@ -1,4 +1,3 @@
-
 import { useRef, useState } from "react";
 import { importStudentsPDF } from "../../services/import.service";
 import {
@@ -34,14 +33,14 @@ const UploadZone = ({
   setHistory,
 }) => {
   // ============================================================================
-// Refs
-// ============================================================================
+  // Refs
+  // ============================================================================
 
   const inputRef = useRef(null);
 
   // ============================================================================
-// States
-// ============================================================================
+  // States
+  // ============================================================================
 
   const [dragActive, setDragActive] = useState(false);
 
@@ -50,8 +49,8 @@ const UploadZone = ({
   const [progress, setProgress] = useState(0);
 
   // ============================================================================
-// Validate File
-// ============================================================================
+  // Validate File
+  // ============================================================================
 
   const validateFile = (file) => {
     if (!file) return false;
@@ -73,8 +72,8 @@ const UploadZone = ({
   };
 
   // ============================================================================
-// Handle Selected File
-// ============================================================================
+  // Handle Selected File
+  // ============================================================================
 
   const handleFile = (file) => {
     if (!validateFile(file)) return;
@@ -84,8 +83,8 @@ const UploadZone = ({
     toast.success("File selected successfully.");
   };
   // ============================================================================
-// Browse File
-// ============================================================================
+  // Browse File
+  // ============================================================================
 
   const handleChange = (e) => {
     const file = e.target.files?.[0];
@@ -96,8 +95,8 @@ const UploadZone = ({
   };
 
   // ============================================================================
-// Drag & Drop
-// ============================================================================
+  // Drag & Drop
+  // ============================================================================
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -112,8 +111,8 @@ const UploadZone = ({
   };
 
   // ============================================================================
-// Remove File
-// ============================================================================
+  // Remove File
+  // ============================================================================
 
   const removeFile = () => {
     setSelectedFile(null);
@@ -138,8 +137,8 @@ const UploadZone = ({
   };
 
   // ============================================================================
-// Download Template
-// ============================================================================
+  // Download Template
+  // ============================================================================
 
   const handleDownloadTemplate = async () => {
     try {
@@ -178,55 +177,63 @@ const UploadZone = ({
   };
 
   // ============================================================================
-// Start Import
-// ============================================================================
+  // Start Import
+  // ============================================================================
   const handleImport = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a file.");
+    console.log("========== IMPORT START ==========");
 
+    if (!selectedFile) {
+      console.log("❌ No file selected");
+      toast.error("Please select a file.");
       return;
     }
 
-    setLoading(true);
+    console.log("📄 Active Tab:", activeTab);
+    console.log("📄 Selected File:", selectedFile);
+    console.log("📄 File Name:", selectedFile.name);
+    console.log("📄 File Size:", selectedFile.size);
 
+    setLoading(true);
     setProgress(10);
 
     try {
       let response;
 
       if (activeTab === "students") {
+        console.log("➡ Calling Student Import API");
+
         if (selectedFile.name.toLowerCase().endsWith(".pdf")) {
           response = await importStudentsPDF(selectedFile);
         } else {
           response = await importStudents(selectedFile);
         }
       } else if (activeTab === "mentors") {
+        console.log("➡ Calling Mentor Import API");
+
         response = await importMentors(selectedFile);
+
+        console.log("✅ Mentor API Response:", response);
       } else {
+        console.log("➡ Calling Group Import API");
+
         response = await importGroups(selectedFile);
       }
+
+      console.log("✅ API Finished");
 
       setProgress(60);
 
       const result = response;
 
-    
-      // ============================================================================
-// Update Preview
-// ============================================================================
+      console.log("Result:", result);
 
+      // Preview
       setPreviewData(result.preview || []);
 
-      // ============================================================================
-// Validation Errors
-// ============================================================================
-
+      // Validation Errors
       setValidationErrors(result.validationErrors || []);
 
-      // ============================================================================
-// Summary
-// ============================================================================
-
+      // Summary
       setSummary({
         total:
           result.summary?.total ||
@@ -234,11 +241,23 @@ const UploadZone = ({
           result.totalRows ||
           0,
 
-        imported: result.imported || result.summary?.imported || 0,
+        imported:
+          result.imported ||
+          result.summary?.imported ||
+          result.summary?.importedRecords ||
+          0,
 
-        failed: result.failed || result.summary?.failed || 0,
+        failed:
+          result.failed ||
+          result.summary?.failed ||
+          result.summary?.failedRecords ||
+          0,
 
-        duplicates: result.duplicates || result.summary?.duplicates || 0,
+        duplicates:
+          result.duplicates ||
+          result.summary?.duplicates ||
+          result.summary?.duplicateRecords ||
+          0,
 
         processingTime: result.processingTime
           ? `${result.processingTime} sec`
@@ -247,28 +266,35 @@ const UploadZone = ({
 
       setProgress(90);
 
-      // ============================================================================
-// Refresh Import History
-// ============================================================================
-
       try {
+        console.log("Refreshing Import History...");
+
         const historyResponse = await getImportHistory();
+
+        console.log("History:", historyResponse);
 
         setHistory(historyResponse.data.data || []);
       } catch (historyError) {
-        console.error(historyError);
+        console.error("History Error:", historyError);
       }
 
       setProgress(100);
 
       toast.success("Import completed successfully.");
     } catch (error) {
-      console.error(error);
+      console.error("========== IMPORT ERROR ==========");
+      console.error("Full Error:", error);
+      console.error("Response:", error.response);
+      console.error("Request:", error.request);
+      console.error("Message:", error.message);
+      console.error("Config:", error.config);
 
       toast.error(
         error?.response?.data?.message || "Import failed. Please try again.",
       );
     } finally {
+      console.log("========== IMPORT END ==========");
+
       setLoading(false);
 
       setTimeout(() => {

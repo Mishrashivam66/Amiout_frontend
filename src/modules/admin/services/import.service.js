@@ -24,18 +24,12 @@ export const importStudents = async (file) => {
 
 export const importMentors = async (file) => {
   const formData = new FormData();
-
   formData.append("file", file);
 
-  const response = await api.post("/admin/import/mentors", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  console.log("Sending request...");
 
-  return response.data.data;
+  return await api.post("/admin/import/mentors", formData);
 };
-
 // ============================================================================
 // Upload Students PDF
 // ============================================================================
