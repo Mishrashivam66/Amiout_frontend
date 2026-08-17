@@ -106,6 +106,8 @@ gap-2
           <Info label="Section" value={profile?.academic?.section} />
 
           <Info label="Group" value={profile?.academic?.group} />
+
+          <Info label="Mentor Email" value={profile?.academic?.mentorEmail} />
         </div>
       </div>
 
