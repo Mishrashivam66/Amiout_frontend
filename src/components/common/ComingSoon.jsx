@@ -1,24 +1,84 @@
+import { useNavigate } from "react-router-dom";
+
 const ComingSoon = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="text-center">
-        <div className="text-6xl mb-6">🚀</div>
+    <div
+      className="
+        min-h-screen w-full
+        flex items-center justify-center
+        bg-gradient-to-br
+        from-slate-950
+        via-blue-950
+        to-emerald-950
+        px-4
+      "
+    >
+      <div
+        className="
+          max-w-xl w-full
+          text-center
+          bg-slate-900/80
+          border border-blue-500/30
+          rounded-3xl
+          p-10
+          shadow-2xl
+        "
+      >
+        {/* Icon */}
+        <div className="text-7xl mb-6">
+          🚀
+        </div>
 
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Coming Soon</h1>
+        {/* Heading */}
+        <h1 className="text-5xl font-bold text-white mb-4">
+          Coming Soon
+        </h1>
 
-        <p className="text-gray-600 text-lg mb-8">
+        {/* Blue + Green line */}
+        <div
+          className="
+            w-32 h-1
+            mx-auto mb-6
+            rounded-full
+            bg-gradient-to-r
+            from-blue-500
+            to-emerald-400
+          "
+        />
+
+        {/* Text */}
+        <p className="text-slate-300 text-lg leading-relaxed mb-8">
           This page is currently under development.
           <br />
-          We’ll be back soon!
+          We're working on something amazing for you.
         </p>
 
+        {/* Button */}
         <button
-          onClick={() => window.history.back()}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg
-                     hover:bg-blue-700 transition duration-200"
+          onClick={() => navigate("/")}
+          className="
+            px-8 py-3
+            bg-gradient-to-r
+            from-blue-600
+            to-emerald-600
+            text-white
+            font-semibold
+            rounded-xl
+            hover:from-blue-500
+            hover:to-emerald-500
+            transition-all
+            duration-300
+            shadow-lg
+          "
         >
-          Go Back
+          Back to Home
         </button>
+
+        <p className="text-slate-500 text-sm mt-8">
+          Stay tuned — we'll be launching soon.
+        </p>
       </div>
     </div>
   );
