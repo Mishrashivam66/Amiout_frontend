@@ -148,7 +148,7 @@ const AppRoutes = () => {
       {/* ====================================== */}
       {/* 404 */}
       {/* ====================================== */}
-      <Route path="reports" element={<ComingSoon />} />
+      <Route path="/terms" element={<ComingSoon />} />
     </Routes>
   );
 };
