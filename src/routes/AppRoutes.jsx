@@ -9,7 +9,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 // ==========================================
 
 import LandingPage from "../modules/auth/pages/LandingPage";
-import NotFound from "../components/common/NotFound";
+import ComingSoon from "../components/common/ComingSoon";
 
 // ==========================================
 // STUDENT AUTH
@@ -148,8 +148,7 @@ const AppRoutes = () => {
       {/* ====================================== */}
       {/* 404 */}
       {/* ====================================== */}
-
-      <Route path="*" element={<NotFound />} />
+      <Route path="reports" element={<ComingSoon />} />
     </Routes>
   );
 };
