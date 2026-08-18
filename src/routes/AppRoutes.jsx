@@ -1,22 +1,45 @@
 // ==========================================
-// IMPORTS
+// REACT ROUTER
 // ==========================================
 
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // ==========================================
-// AUTH PAGES
+// COMMON PAGES
 // ==========================================
-import MentorRoutes from "../modules/mentor/routes/mentorRoutes";
+
 import LandingPage from "../modules/auth/pages/LandingPage";
+import NotFound from "../components/common/NotFound";
+
+// ==========================================
+// STUDENT AUTH
+// ==========================================
+
 import Login from "../modules/auth/pages/Login";
 import Register from "../modules/auth/pages/Register";
+import StudentRegister from "../modules/auth/pages/StudentRegister";
 import VerifyOTP from "../modules/auth/pages/VerifyOTP";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import VerifyResetOTP from "../modules/auth/pages/VerifyResetOTP";
 import ResetPassword from "../modules/auth/pages/ResetPassword";
+
+// ==========================================
+// MENTOR AUTH
+// ==========================================
+
+import MentorRegister from "../modules/auth/pages/MentorRegister";
+import MentorLogin from "../modules/auth/mentor-login/MentorLogin";
+import MentorForgotPassword from "../modules/auth/pages/MentorForgotPassword";
+import MentorVerifyResetOTP from "../modules/auth/pages/MentorVerifyResetOTP";
+import MentorResetPassword from "../modules/auth/pages/MentorResetPassword";
+
+// ==========================================
+// ADMIN AUTH
+// ==========================================
+
 import AdminLogin from "../modules/auth/admin-login/AdminLogin";
 import AdminRegister from "../modules/auth/pages/AdminRegister";
+
 // ==========================================
 // ROUTE GUARD
 // ==========================================
@@ -24,29 +47,30 @@ import AdminRegister from "../modules/auth/pages/AdminRegister";
 import ProtectedRoute from "./ProtectedRoute";
 
 // ==========================================
-// COMMON
-// ==========================================
-
-import NotFound from "../components/common/NotFound";
-
-// ==========================================
 // ADMIN MODULE
 // ==========================================
 
 import DashboardLayout from "../modules/admin/components/layout/DashboardLayout";
-import StudentRegister from "../modules/auth/pages/StudentRegister";
 import AdminDashboard from "../modules/admin/pages/AdminDashboard";
 import Users from "../modules/admin/pages/Users";
 import Imports from "../modules/admin/pages/Imports";
 import Reports from "../modules/admin/pages/Reports";
 import Settings from "../modules/admin/pages/Settings";
 import MentorList from "../modules/admin/pages/Mentors/MentorList";
-import MentorRegister from "../modules/auth/pages/MentorRegister";
-import MentorLogin from "../modules/auth/mentor-login/MentorLogin";
-import MentorDashboard from "../modules/mentor/pages/Dashboard";
-import StudentRoutes from "../modules/student/routes/studentRoutes";
 import Outpasses from "../modules/admin/pages/Outpasses";
 import Notifications from "../modules/admin/pages/Notifications";
+
+// ==========================================
+// MENTOR MODULE
+// ==========================================
+
+import MentorRoutes from "../modules/mentor/routes/mentorRoutes";
+
+// ==========================================
+// STUDENT MODULE
+// ==========================================
+
+import StudentRoutes from "../modules/student/routes/studentRoutes";
 // ==========================================
 
 // ROUTES
@@ -68,6 +92,17 @@ const AppRoutes = () => {
       <Route path="/mentor/register" element={<MentorRegister />} />
 
       <Route path="/mentor/login" element={<MentorLogin />} />
+      <Route
+        path="/mentor/forgot-password"
+        element={<MentorForgotPassword />}
+      />
+
+      <Route
+        path="/mentor/verify-reset-otp"
+        element={<MentorVerifyResetOTP />}
+      />
+
+      <Route path="/mentor/reset-password" element={<MentorResetPassword />} />
 
       <Route path="/verify-otp" element={<VerifyOTP />} />
 
