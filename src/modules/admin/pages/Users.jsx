@@ -24,6 +24,8 @@ const Users = () => {
       setLoading(true);
 
       const response = await getUsers();
+      console.log("API Response:", response);
+      console.log("Users:", response.data);
 
       setUsers(response.data || []);
     } catch (error) {

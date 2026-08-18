@@ -145,13 +145,13 @@ const UserTable = ({ users = [], loading = false, refresh }) => {
                 </td>
 
                 <td className="px-6 py-4 text-slate-300">
-                  {user.enrollmentNumber}
+                  {user.enrollmentNo || "-"}
                 </td>
 
                 <td className="px-6 py-4 text-slate-300">{user.rollNumber}</td>
 
                 <td className="px-6 py-4 text-slate-300">
-                  {user.program?.name || "-"}
+                  {user.course || "-"}
                 </td>
 
                 <td className="px-6 py-4 text-center text-slate-300">
@@ -179,13 +179,13 @@ const UserTable = ({ users = [], loading = false, refresh }) => {
                 </td>
 
                 <td className="px-6 py-4 text-center">
-                  {user.isActive ? (
+                  {user.isVerified ? (
                     <span className="inline-flex rounded-full bg-green-500/20 px-3 py-1 text-sm font-semibold text-green-400">
-                      Active
+                      Verified
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-red-500/20 px-3 py-1 text-sm font-semibold text-red-400">
-                      Inactive
+                    <span className="inline-flex rounded-full bg-yellow-500/20 px-3 py-1 text-sm font-semibold text-yellow-400">
+                      Pending
                     </span>
                   )}
                 </td>
