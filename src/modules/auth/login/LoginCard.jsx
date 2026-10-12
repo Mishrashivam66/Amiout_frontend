@@ -1,38 +1,76 @@
-// ============================================================
-// AMIOUT Enterprise Edition
-// LoginCard.jsx
-// Part 1
-// ============================================================
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-
-import { Mail, ArrowRight } from "lucide-react";
+import {
+  Mail,
+  LockKeyhole,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  GraduationCap,
+  Users,
+  Building2,
+  ScanLine,
+} from "lucide-react";
 
 import { toast } from "sonner";
 
+import campusLogo from "../../../assets/Campus Logo.png";
 import { useAuth } from "../../../context/AuthContext";
 import { login as loginService } from "../services/auth.service";
 
-import LoginHeader from "./LoginHeader";
-import AuthInput from "../common/AuthInput";
-import PasswordInput from "../common/PasswordInput";
+// ==========================================
+// ROLE DASHBOARD ROUTES
+// ==========================================
+
+const DASHBOARD_ROUTES = {
+  STUDENT: "/student/dashboard",
+  MENTOR: "/mentor/dashboard",
+  COORDINATOR: "/coordinator/dashboard",
+  HOD: "/hod/dashboard",
+  HOI: "/hoi/dashboard",
+  ADMIN: "/admin/dashboard",
+  SECURITY: "/security/dashboard",
+  SUPER_ADMIN: "/super-admin/dashboard",
+};
+
+// ==========================================
+// ROLE LABELS
+// ==========================================
+
+const roleItems = [
+  {
+    label: "Student",
+    icon: GraduationCap,
+    color: "text-emerald-400",
+  },
+  {
+    label: "Faculty",
+    icon: Users,
+    color: "text-cyan-400",
+  },
+  {
+    label: "Admin",
+    icon: Building2,
+    color: "text-violet-400",
+  },
+  {
+    label: "Security",
+    icon: ScanLine,
+    color: "text-rose-400",
+  },
+];
+
+// ==========================================
+// LOGIN CARD
+// ==========================================
 
 const LoginCard = () => {
-  // ==========================================================
-  // Hooks
-  // ==========================================================
-
   const navigate = useNavigate();
-
   const { login } = useAuth();
 
-  // ==========================================================
-  // State
-  // ==========================================================
-
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -40,9 +78,9 @@ const LoginCard = () => {
     remember: false,
   });
 
-  // ==========================================================
-  // Handle Change
-  // ==========================================================
+  // ========================================
+  // INPUT CHANGE
+  // ========================================
 
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
@@ -53,235 +91,298 @@ const LoginCard = () => {
     }));
   };
 
-  // ==========================================================
-  // Login
-  // ==========================================================
+  // ========================================
+  // HANDLE LOGIN
+  // ========================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (loading) return;
+
+    if (!formData.email.trim() || !formData.password) {
+      toast.error("Please enter your email and password.");
+      return;
+    }
+
     try {
       setLoading(true);
 
+      // Common backend login for all roles.
       const response = await loginService({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
 
-      login(response.user, response.accessToken);
-
-      toast.success(response.message);
-
-      switch (response.user.role) {
-        case "ADMIN":
-          navigate("/admin/dashboard", {
-            replace: true,
-          });
-          break;
-
-        case "STUDENT":
-          navigate("/student/dashboard", {
-            replace: true,
-          });
-          break;
-
-        case "MENTOR":
-          navigate("/mentor/dashboard", {
-            replace: true,
-          });
-          break;
-
-        case "SECURITY":
-          navigate("/security/dashboard", {
-            replace: true,
-          });
-          break;
-
-        default:
-          navigate("/", {
-            replace: true,
-          });
+      if (!response?.user || !response?.accessToken) {
+        throw new Error("Invalid login response.");
       }
+
+      const user = response.user;
+
+      // ====================================
+      // RESOLVE AUTHORIZED ROLES
+      // ====================================
+
+      const assignedRoles = [
+        ...new Set(
+          [...(Array.isArray(user.roles) ? user.roles : []), user.role]
+            .filter((role) => typeof role === "string")
+            .map((role) => role.trim().toUpperCase()),
+        ),
+      ];
+
+      const availableRoles = assignedRoles.filter(
+        (role) => DASHBOARD_ROUTES[role],
+      );
+
+      if (!availableRoles.length) {
+        throw new Error("No dashboard assigned to this account.");
+      }
+
+      const preferredRole = String(user.role || "")
+        .trim()
+        .toUpperCase();
+
+      const primaryRole = availableRoles.includes(preferredRole)
+        ? preferredRole
+        : availableRoles[0];
+
+      const normalizedUser = {
+        ...user,
+        role: primaryRole,
+        roles: assignedRoles,
+        mustChangePassword:
+          response.mustChangePassword === true ||
+          user.mustChangePassword === true,
+      };
+
+      // ====================================
+      // SAVE AUTHENTICATED USER
+      // ====================================
+
+      // Reuse existing AuthContext.
+      login(normalizedUser, response.accessToken);
+
+      // ====================================
+      // FIRST LOGIN PASSWORD CHANGE
+      // ====================================
+
+      if (normalizedUser.mustChangePassword) {
+        toast.info("Please change your temporary password to continue.");
+
+        navigate("/change-password", {
+          replace: true,
+        });
+
+        return;
+      }
+
+      // ====================================
+      // NORMAL DASHBOARD REDIRECT
+      // ====================================
+
+      toast.success(response.message || "Login successful!");
+
+      navigate(DASHBOARD_ROUTES[primaryRole], {
+        replace: true,
+      });
     } catch (error) {
-      console.error(error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to sign in. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // ==========================================================
-  // UI
-  // ==========================================================
-
   return (
-    <motion.div
-      initial={{
-        opacity: 0,
-        y: 40,
-        scale: 0.98,
-      }}
-      animate={{
-        opacity: 1,
-        y: 0,
-        scale: 1,
-      }}
-      transition={{
-        duration: 0.6,
-        ease: "easeOut",
-      }}
-      className="
-        relative
-        mx-auto
-        w-full
-        max-w-xl
-        overflow-hidden
-        rounded-[32px]
-        border
-        border-white/10
-        bg-white/5
-        shadow-2xl
-        backdrop-blur-3xl
-      "
-    >
-      {/* Top Gradient */}
+    <div className="relative w-full overflow-hidden rounded-[28px] bg-[#061225]/90 px-5 py-6 text-white backdrop-blur-2xl sm:px-9 sm:py-8">
+      {/* Background Glows */}
+      <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-cyan-500/10 blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-24 -right-20 h-60 w-60 rounded-full bg-violet-600/15 blur-[90px]" />
 
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600" />
-
-      {/* Glow */}
-
-      <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-cyan-500/10 blur-[160px]" />
-
-      <div className="absolute -right-28 -bottom-28 h-80 w-80 rounded-full bg-violet-500/10 blur-[160px]" />
-
-      {/* Content */}
-
-      <div className="relative z-10 p-6 sm:p-8 lg:p-10">
-        <LoginHeader />
-
-        {/* Form */}
-
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {/* University Email */}
-
-          <AuthInput
-            label="University Email"
-            type="email"
-            icon={Mail}
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter your Amity University email"
+      <div className="relative z-10">
+        {/* Center Logo */}
+        <div className="mb-5 flex flex-col items-center text-center">
+          <img
+            src={campusLogo}
+            alt="AMIOUT Logo"
+            className="mb-3 h-24 w-24 rounded-2xl object-contain drop-shadow-[0_0_20px_rgba(0,212,255,0.35)] sm:h-28 sm:w-28"
           />
 
-          {/* Password */}
+          <h2 className="text-3xl font-black tracking-tight">AMIOUT</h2>
 
-          <PasswordInput
-            label="Password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Enter your password"
-          />
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.19em] text-cyan-300">
+            Amity University Madhya Pradesh
+          </p>
+        </div>
 
-          {/* Remember */}
+        {/* Welcome Heading */}
+        <div className="mb-6 text-center">
+          <h3 className="text-2xl font-extrabold sm:text-[28px]">
+            Welcome Back
+          </h3>
 
-          <div className="flex items-center justify-between gap-4">
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                name="remember"
-                checked={formData.remember}
-                onChange={handleChange}
-                className="h-5 w-5 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
-              />
+          <p className="mt-2 text-sm text-slate-400">
+            Sign in with your university email to continue
+          </p>
+        </div>
 
-              <span className="text-sm font-medium text-slate-300">
-                Remember Me
-              </span>
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email */}
+          <div>
+            <label
+              htmlFor="login-email"
+              className="mb-2 block text-sm font-semibold text-slate-200"
+            >
+              University Email Address
             </label>
 
-            <Link
-              to="/forgot-password"
-              className="text-sm font-semibold text-cyan-400 transition hover:text-cyan-300"
-            >
-              Forgot Password?
-            </Link>
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition focus-within:border-cyan-400/70">
+              <Mail className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
+
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your university email"
+                autoComplete="username"
+                required
+                disabled={loading}
+                className="w-full min-w-0 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
+              />
+            </div>
           </div>
 
-          {/* Login Button */}
+          {/* Password */}
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <label
+                htmlFor="login-password"
+                className="text-sm font-semibold text-slate-200"
+              >
+                Password
+              </label>
 
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-cyan-400 hover:text-cyan-300"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition focus-within:border-cyan-400/70">
+              <LockKeyhole className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
+
+              <input
+                id="login-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                disabled={loading}
+                className="min-w-0 flex-1 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="mr-4 text-slate-400 hover:text-white"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Remember Me */}
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              name="remember"
+              checked={formData.remember}
+              onChange={handleChange}
+              disabled={loading}
+              className="h-4 w-4 accent-cyan-500"
+            />
+
+            <span className="text-sm text-slate-300">Remember me</span>
+          </label>
+
+          {/* Sign In */}
           <motion.button
-            whileHover={{
-              scale: 1.02,
-            }}
-            whileTap={{
-              scale: 0.98,
-            }}
+            whileHover={{ scale: 1.015 }}
+            whileTap={{ scale: 0.985 }}
             type="submit"
             disabled={loading}
-            className="
-              group
-              flex
-              w-full
-              items-center
-              justify-center
-              gap-3
-              rounded-2xl
-              bg-gradient-to-r
-              from-cyan-500
-              via-blue-500
-              to-violet-600
-              px-6
-              py-4
-              font-semibold
-              text-white
-              shadow-xl
-              shadow-cyan-500/20
-              transition-all
-              duration-300
-              hover:shadow-cyan-500/40
-              hover:scale-[1.01]
-              disabled:cursor-not-allowed
-              disabled:opacity-60
-            "
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-blue-500/25 transition disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 Signing In...
               </>
             ) : (
               <>
-                Sign In Securely
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                Sign In
+                <ArrowRight className="h-5 w-5" />
               </>
             )}
           </motion.button>
-          {/* ========================================================== */}
-          {/* Footer */}
-          {/* ========================================================== */}
-
-          <div className="mt-8 border-t border-white/10 pt-6 text-center">
-            <p className="text-sm text-slate-400">
-              Don't have an account?
-              <Link
-                to="/student/register"
-                className="
-                  ml-2
-                  font-semibold
-                  text-cyan-400
-                  transition-all
-                  duration-300
-                  hover:text-cyan-300
-                "
-              >
-                Create Account
-              </Link>
-            </p>
-          </div>
         </form>
+
+        {/* Divider */}
+        <div className="my-5 flex items-center gap-4">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="text-xs text-slate-500">OR</span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+
+        {/* Activate Account */}
+        <div className="rounded-xl border border-white/15 bg-white/[0.035] px-4 py-3.5 text-center">
+          <p className="text-sm text-slate-300">First time using AMIOUT?</p>
+
+          <Link
+            to="/activate-account"
+            className="mt-1.5 inline-flex items-center gap-2 text-sm font-bold text-cyan-300 transition hover:text-cyan-200"
+          >
+            Activate Your Account
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {/* Role Labels */}
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {roleItems.map(({ label, icon: Icon, color }) => (
+            <div
+              key={label}
+              className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2 py-2.5 text-xs font-medium text-slate-200"
+            >
+              <Icon className={`h-4 w-4 ${color}`} />
+              {label}
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-4 text-center text-xs leading-5 text-slate-400">
+          One secure login for Students, Faculty, Administration and Security.
+        </p>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

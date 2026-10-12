@@ -1,92 +1,33 @@
-// ============================================================
-// HeroBackground.jsx
-// Clean Premium Background
-// ============================================================
-
-import { motion } from "framer-motion";
+import campusJourney from "../../../../../assets/campus-journey.webp";
 
 const HeroBackground = () => {
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Base */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-black" />
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 bg-[#030b1e]" />
 
-      {/* Aurora */}
-      <motion.div
-        animate={{
-          x: [0, 80, -50, 0],
-          y: [0, -30, 40, 0],
-        }}
-        transition={{
-          duration: 18,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-cyan-500/15 blur-[120px]"
-      />
-
-      <motion.div
-        animate={{
-          x: [0, -60, 40, 0],
-          y: [0, 40, -20, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute top-10 right-0 h-[450px] w-[450px] rounded-full bg-blue-500/15 blur-[120px]"
-      />
-
-      <motion.div
-        animate={{
-          scale: [1, 1.08, 1],
-        }}
-        transition={{
-          duration: 16,
-          repeat: Infinity,
-        }}
-        className="absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-violet-500/10 blur-[120px]"
-      />
-
-      {/* Grid */}
+      {/* Desktop campus image */}
       <div
-        className="absolute inset-0 opacity-[0.04]"
+        className="absolute inset-0 hidden lg:block"
         style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
+          backgroundImage: `url(${campusJourney})`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right center",
+          backgroundSize: "auto 100%",
         }}
       />
 
-      {/* Floating Dots */}
-      {Array.from({ length: 10 }).map((_, i) => (
-        <motion.span
-          key={i}
-          className="absolute h-1.5 w-1.5 rounded-full bg-cyan-300/70"
-          style={{
-            left: `${10 + i * 8}%`,
-            top: `${15 + (i % 5) * 15}%`,
-          }}
-          animate={{
-            y: [0, -15, 0],
-            opacity: [0.3, 1, 0.3],
-          }}
-          transition={{
-            duration: 3 + (i % 2),
-            repeat: Infinity,
-            delay: i * 0.3,
-          }}
-        />
-      ))}
+      {/* Dark fade on the left for readable text */}
+      <div className="absolute inset-0 hidden bg-gradient-to-r from-[#030b1e] via-[#030b1e]/90 via-25% to-transparent lg:block" />
 
-      {/* Center Glow */}
-      <div className="absolute left-1/2 top-1/2 h-[550px] w-[550px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/5 blur-[180px]" />
+      {/* Mobile background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-30 lg:hidden"
+        style={{
+          backgroundImage: `url(${campusJourney})`,
+        }}
+      />
 
-      {/* Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(2,6,23,0.75)_100%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#030b1e] to-transparent" />
     </div>
   );
 };

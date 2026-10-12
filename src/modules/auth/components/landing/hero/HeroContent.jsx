@@ -1,99 +1,55 @@
-// ============================================================
-// HeroContent.jsx
-// Clean Modern Hero
-// ============================================================
-
 import { motion } from "framer-motion";
-import { Sparkles, CheckCircle2 } from "lucide-react";
-
 import CTAButtons from "./CTAButtons";
 
-const HeroContent = () => {
-  return (
-    <div className="relative z-20 max-w-3xl">
-      {/* Badge */}
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-5 py-2 backdrop-blur-xl"
-      >
-        <Sparkles className="h-4 w-4 text-cyan-400" />
-
-        <span className="text-sm font-semibold text-cyan-300">
-          Digital Campus Solution
-        </span>
-      </motion.div>
-
-      {/* Heading */}
-
-      <motion.h1
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mt-8 text-5xl font-black leading-tight text-white md:text-7xl"
-      >
-        Smart
-        <span className="block bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 bg-clip-text text-transparent">
-          Outpass
-        </span>
-        <span className="block">Management</span>
-      </motion.h1>
-
-      {/* Subtitle */}
-
-      <motion.p
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="mt-8 max-w-2xl text-lg leading-8 text-slate-300"
-      >
-        AMIOUT is a smart digital outpass management platform that streamlines
-        approvals, tracks student requests in real time, and provides secure
-        role-based access for students, mentors, wardens, security staff, and
-        administrators.
-      </motion.p>
-
-      {/* Highlights */}
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-10 grid gap-4 sm:grid-cols-3"
-      >
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-          <CheckCircle2 className="text-emerald-400" />
-
-          <span className="text-slate-200">Digital Outpass</span>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-          <CheckCircle2 className="text-emerald-400" />
-
-          <span className="text-slate-200">Role Based Access</span>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-          <CheckCircle2 className="text-emerald-400" />
-
-          <span className="text-slate-200">Real-Time Tracking</span>
-        </div>
-      </motion.div>
-
-      {/* Buttons */}
-
-      <motion.div
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="mt-12"
-      >
-        <CTAButtons />
-      </motion.div>
-    </div>
-  );
-};
-
+const fade = { hidden: { opacity: 0, y: 18 }, visible: { opacity: 1, y: 0 } };
+const HeroContent = () => (
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    transition={{ staggerChildren: 0.12 }}
+    className="relative z-20 w-full max-w-[540px]"
+  >
+    <motion.div
+      variants={fade}
+      className="inline-flex rounded-full border border-cyan-500/60 bg-[#041b35]/80 px-4 py-2 text-[10px] font-semibold tracking-[.19em] text-cyan-300 sm:text-xs"
+    >
+      AMITY UNIVERSITY MADHYA PRADESH
+    </motion.div>
+    <motion.h1
+      variants={fade}
+      className="
+  mt-6
+  text-[clamp(2.9rem,5vw,5.8rem)]
+  font-black
+  leading-[1.02]
+  tracking-[-0.055em]
+  text-white
+"
+    >
+      Freedom
+      <br />
+      with
+      <br />
+      <span className="bg-gradient-to-r from-violet-500 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
+        Responsibility
+      </span>
+    </motion.h1>
+    <motion.p
+      variants={fade}
+      className="mt-7 text-xs font-semibold tracking-[.34em] text-blue-200 sm:text-sm"
+    >
+      SMART | SECURE | SEAMLESS
+    </motion.p>
+    <motion.p
+      variants={fade}
+      className="mt-5 max-w-[465px] text-base leading-7 text-slate-300 sm:text-lg"
+    >
+      AMIOUT simplifies the outpass process for day scholars with a digital,
+      transparent and secure system — designed for a smarter campus experience.
+    </motion.p>
+    <motion.div variants={fade} className="mt-8">
+      <CTAButtons />
+    </motion.div>
+  </motion.div>
+);
 export default HeroContent;

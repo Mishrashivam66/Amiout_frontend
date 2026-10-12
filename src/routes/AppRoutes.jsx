@@ -1,7 +1,3 @@
-// ==========================================
-// REACT ROUTER
-// ==========================================
-
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // ==========================================
@@ -10,35 +6,25 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import LandingPage from "../modules/auth/pages/LandingPage";
 import ComingSoon from "../components/common/ComingSoon";
-
+import ActivateAccount from "../modules/auth/pages/ActivateAccount";
 // ==========================================
-// STUDENT AUTH
+// COMMON AUTH
 // ==========================================
 
 import Login from "../modules/auth/pages/Login";
-import Register from "../modules/auth/pages/Register";
-import StudentRegister from "../modules/auth/pages/StudentRegister";
 import VerifyOTP from "../modules/auth/pages/VerifyOTP";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
 import VerifyResetOTP from "../modules/auth/pages/VerifyResetOTP";
 import ResetPassword from "../modules/auth/pages/ResetPassword";
+import ChangePassword from "../modules/auth/pages/ChangePassword";
 
 // ==========================================
-// MENTOR AUTH
+// LEGACY MENTOR PASSWORD RESET
 // ==========================================
 
-import MentorRegister from "../modules/auth/pages/MentorRegister";
-import MentorLogin from "../modules/auth/mentor-login/MentorLogin";
 import MentorForgotPassword from "../modules/auth/pages/MentorForgotPassword";
 import MentorVerifyResetOTP from "../modules/auth/pages/MentorVerifyResetOTP";
 import MentorResetPassword from "../modules/auth/pages/MentorResetPassword";
-
-// ==========================================
-// ADMIN AUTH
-// ==========================================
-
-import AdminLogin from "../modules/auth/admin-login/AdminLogin";
-import AdminRegister from "../modules/auth/pages/AdminRegister";
 
 // ==========================================
 // ROUTE GUARD
@@ -71,27 +57,73 @@ import MentorRoutes from "../modules/mentor/routes/mentorRoutes";
 // ==========================================
 
 import StudentRoutes from "../modules/student/routes/studentRoutes";
-// ==========================================
 
-// ROUTES
+// ==========================================
+// APP ROUTES
 // ==========================================
 
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* ====================================== */}
-      {/* PUBLIC ROUTES */}
-      {/* ====================================== */}
+      {/* ====================================
+          PUBLIC ROUTES
+      ==================================== */}
 
       <Route path="/" element={<LandingPage />} />
 
       <Route path="/login" element={<Login />} />
-      <Route path="/student/register" element={<StudentRegister />} />
 
-      <Route path="/register" element={<Register />} />
-      <Route path="/mentor/register" element={<MentorRegister />} />
+      <Route path="/activate-account" element={<ActivateAccount />} />
 
-      <Route path="/mentor/login" element={<MentorLogin />} />
+      {/* ====================================
+          LEGACY LOGIN REDIRECTS
+      ==================================== */}
+
+      <Route path="/mentor/login" element={<Navigate to="/login" replace />} />
+
+      <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+
+      {/* ====================================
+          DISABLE PUBLIC REGISTRATION
+      ==================================== */}
+
+      <Route path="/register" element={<Navigate to="/login" replace />} />
+
+      <Route
+        path="/student/register"
+        element={<Navigate to="/login" replace />}
+      />
+
+      <Route
+        path="/mentor/register"
+        element={<Navigate to="/login" replace />}
+      />
+
+      <Route
+        path="/admin/register"
+        element={<Navigate to="/login" replace />}
+      />
+
+      {/* ====================================
+          EMAIL OTP
+      ==================================== */}
+
+      <Route path="/verify-otp" element={<VerifyOTP />} />
+
+      {/* ====================================
+          COMMON PASSWORD RECOVERY
+      ==================================== */}
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      <Route path="/verify-reset-otp" element={<VerifyResetOTP />} />
+
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* ====================================
+          LEGACY MENTOR PASSWORD RESET
+      ==================================== */}
+
       <Route
         path="/mentor/forgot-password"
         element={<MentorForgotPassword />}
@@ -104,21 +136,23 @@ const AppRoutes = () => {
 
       <Route path="/mentor/reset-password" element={<MentorResetPassword />} />
 
-      <Route path="/verify-otp" element={<VerifyOTP />} />
+      {/* ====================================
+          MANDATORY FIRST-LOGIN
+          PASSWORD CHANGE
+      ==================================== */}
 
-      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <ChangePassword />
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/verify-reset-otp" element={<VerifyResetOTP />} />
-
-      <Route path="/reset-password" element={<ResetPassword />} />
-
-      <Route path="/admin/login" element={<AdminLogin />} />
-
-      <Route path="/admin/register" element={<AdminRegister />} />
-
-      {/* ====================================== */}
-      {/* ADMIN ROUTES */}
-      {/* ====================================== */}
+      {/* ====================================
+          ADMIN PROTECTED ROUTES
+      ==================================== */}
 
       <Route
         path="/admin"
@@ -131,24 +165,110 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
 
         <Route path="dashboard" element={<AdminDashboard />} />
+
         <Route path="users" element={<Users />} />
+
         <Route path="imports" element={<Imports />} />
+
         <Route path="mentors" element={<MentorList />} />
+
         <Route path="reports" element={<Reports />} />
+
         <Route path="settings" element={<Settings />} />
+
         <Route path="outpasses" element={<Outpasses />} />
+
         <Route path="notifications" element={<Notifications />} />
       </Route>
 
+      {/* ====================================
+          EXISTING MENTOR ROUTES
+      ==================================== */}
+
       {MentorRoutes}
-      {/* Student Routes */}
+
+      {/* ====================================
+          EXISTING STUDENT ROUTES
+      ==================================== */}
 
       {StudentRoutes}
 
-      {/* ====================================== */}
-      {/* 404 */}
-      {/* ====================================== */}
+      {/* ====================================
+          COORDINATOR DASHBOARD
+      ==================================== */}
+
+      <Route
+        path="/coordinator/dashboard"
+        element={
+          <ProtectedRoute roles={["COORDINATOR"]}>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ====================================
+          HOD DASHBOARD
+      ==================================== */}
+
+      <Route
+        path="/hod/dashboard"
+        element={
+          <ProtectedRoute roles={["HOD"]}>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ====================================
+          HOI DASHBOARD
+      ==================================== */}
+
+      <Route
+        path="/hoi/dashboard"
+        element={
+          <ProtectedRoute roles={["HOI"]}>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ====================================
+          SECURITY DASHBOARD
+      ==================================== */}
+
+      <Route
+        path="/security/dashboard"
+        element={
+          <ProtectedRoute roles={["SECURITY"]}>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ====================================
+          SUPER ADMIN DASHBOARD
+      ==================================== */}
+
+      <Route
+        path="/super-admin/dashboard"
+        element={
+          <ProtectedRoute roles={["SUPER_ADMIN"]}>
+            <ComingSoon />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ====================================
+          OTHER ROUTES
+      ==================================== */}
+
       <Route path="/terms" element={<ComingSoon />} />
+
+      {/* ====================================
+          UNKNOWN ROUTES
+      ==================================== */}
+
+      <Route path="*" element={<ComingSoon />} />
     </Routes>
   );
 };

@@ -1,42 +1,25 @@
-// ============================================================
-// AMIOUT
-// CTAButtons.jsx
-// ============================================================
-
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowRight, LogIn } from "lucide-react";
-
+import { ArrowRight, CirclePlay } from "lucide-react";
 const MotionLink = motion(Link);
-
-const CTAButtons = () => {
-  return (
-    <div className="flex flex-wrap gap-4">
-      {/* Register */}
-
-      <MotionLink
-        to="/register"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.97 }}
-        className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-7 py-4 font-semibold text-white shadow-xl shadow-cyan-500/20 transition-all duration-300 hover:shadow-cyan-500/40"
-      >
-        Register
-        <ArrowRight className="h-5 w-5 transition duration-300 group-hover:translate-x-1" />
-      </MotionLink>
-
-      {/* Login */}
-
-      <MotionLink
-        to="/login"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.97 }}
-        className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-7 py-4 font-semibold text-white backdrop-blur-xl transition-all duration-300 hover:border-cyan-500/40 hover:bg-white/10"
-      >
-        <LogIn className="h-5 w-5 text-cyan-400" />
-        Login
-      </MotionLink>
-    </div>
-  );
-};
-
+const CTAButtons = () => (
+  <div className="flex flex-wrap gap-4">
+    <MotionLink
+      to="/login"
+      whileHover={{ y: -3 }}
+      whileTap={{ scale: 0.97 }}
+      className="inline-flex min-h-14 items-center gap-5 rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 px-7 font-bold text-white shadow-[0_10px_32px_rgba(14,165,233,.3)]"
+    >
+      Get Started <ArrowRight size={20} />
+    </MotionLink>
+    <motion.a
+      href="#how-it-works"
+      whileHover={{ y: -3 }}
+      whileTap={{ scale: 0.97 }}
+      className="inline-flex min-h-14 items-center gap-3 rounded-full border border-blue-300/30 bg-[#030b1e]/70 px-7 font-medium text-blue-100"
+    >
+      <CirclePlay size={22} className="text-cyan-300" /> Watch Demo
+    </motion.a>
+  </div>
+);
 export default CTAButtons;
