@@ -8,26 +8,15 @@ const baseURL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL,
-
-  headers: {
-    "Content-Type": "application/json",
-  },
-
   withCredentials: true,
 });
 
-// Separate Axios instance to avoid
-// refresh requests entering the same
-// response interceptor recursively.
-
 const refreshClient = axios.create({
   baseURL,
-
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
-
-  withCredentials: true,
 });
 
 // ==========================================
@@ -40,8 +29,6 @@ const clearStoredSession = () => {
   localStorage.removeItem("activeRole");
   localStorage.removeItem("user");
 
-  // Notify AuthContext and other listeners
-  // that the stored session is no longer valid.
   window.dispatchEvent(new Event("amiout:session-expired"));
 };
 
@@ -66,9 +53,6 @@ const isPublicAuthRequest = (url = "") => {
 // ==========================================
 // REFRESH REQUEST MANAGEMENT
 // ==========================================
-
-// All concurrent 401 responses share
-// one refresh operation.
 
 let refreshPromise = null;
 
@@ -112,9 +96,20 @@ api.interceptors.request.use(
     const token = localStorage.getItem("accessToken");
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.set("Authorization", `Bearer ${token}`);
     } else {
-      delete config.headers.Authorization;
+      config.headers.delete("Authorization");
+    }
+
+    // ======================================
+    // HANDLE JSON AND EXCEL FILE UPLOADS
+    // ======================================
+
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      // Browser sets multipart boundary.
+      config.headers.set("Content-Type", undefined);
+    } else if (!config.headers.get("Content-Type")) {
+      config.headers.set("Content-Type", "application/json");
     }
 
     return config;
@@ -152,10 +147,6 @@ api.interceptors.response.use(
     // DO NOT REFRESH PUBLIC AUTH REQUESTS
     // ======================================
 
-    // Wrong login credentials and invalid
-    // OTP responses should reach the form
-    // without destroying the current session.
-
     if (isPublicAuthRequest(requestUrl)) {
       return Promise.reject(error);
     }
@@ -188,10 +179,6 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       clearStoredSession();
-
-      // Avoid a forced page reload.
-      // AuthContext / route guards should
-      // handle navigation after this event.
 
       return Promise.reject(refreshError);
     }

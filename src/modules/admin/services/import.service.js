@@ -23,13 +23,16 @@ export const importStudents = async (file) => {
 // ============================================================================
 
 export const importMentors = async (file) => {
+  if (!(file instanceof File)) {
+    throw new Error("Please select a valid Excel file.");
+  }
+
   const formData = new FormData();
   formData.append("file", file);
 
-  console.log("Sending request...");
-
-  return await api.post("/admin/import/mentors", formData);
+  return api.post("/academic/mentor-import/import", formData);
 };
+
 // ============================================================================
 // Upload Students PDF
 // ============================================================================

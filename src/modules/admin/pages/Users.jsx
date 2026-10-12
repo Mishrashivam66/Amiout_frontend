@@ -1,12 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 
-import { getUsers } from "../services/user.service";
+import { getStudentMasterRecords } from "../services/studentMaster.service";
 
 import UserTable from "../components/users/UserTable";
 import UserSearch from "../components/users/UserSearch";
 import UserFilter from "../components/users/UserFilter";
 import UserPagination from "../components/users/UserPagination";
+
+const normalizeStudent = (student) => {
+  const rawStatus = String(student.status ?? "").toUpperCase();
+
+  return {
+    ...student,
+
+    _id: student._id,
+
+    name: student.name || student.studentName || student.fullName || "",
+
+    email: student.email || student.studentEmail || student.officialEmail || "",
+
+    enrollmentNo:
+      student.enrollmentNo ||
+      student.enrollmentNumber ||
+      student.enrollment ||
+      "",
+
+    semester: student.semester ?? "",
+
+    isActive:
+      typeof student.isActive === "boolean"
+        ? student.isActive
+        : rawStatus === "ACTIVE",
+  };
+};
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -19,35 +46,63 @@ const Users = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // ======================================
+  // FETCH STUDENT MASTER RECORDS
+  // ======================================
+
   const loadUsers = async () => {
     try {
       setLoading(true);
 
-      const response = await getUsers();
-      console.log("API Response:", response);
-      console.log("Users:", response.data);
+      const response = await getStudentMasterRecords();
 
-      setUsers(response.data || []);
+      const payload = response.data;
+
+      const records = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.data?.students)
+            ? payload.data.students
+            : Array.isArray(payload?.students)
+              ? payload.students
+              : [];
+
+      setUsers(records.map(normalizeStudent));
     } catch (error) {
-      console.error(error);
+      console.error("Student Master fetch error:", error);
 
-      toast.error(error?.response?.data?.message || "Unable to load students.");
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to load Student Master records.",
+      );
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     loadUsers();
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const keyword = search.toLowerCase();
+  // ======================================
+  // SEARCH AND FILTER
+  // ======================================
 
+  const filteredUsers = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    return users.filter((user) => {
       const matchesSearch =
-        user.name?.toLowerCase().includes(keyword) ||
-        user.email?.toLowerCase().includes(keyword) ||
-        user.enrollmentNo?.toLowerCase().includes(keyword);
+        String(user.name ?? "")
+          .toLowerCase()
+          .includes(keyword) ||
+        String(user.email ?? "")
+          .toLowerCase()
+          .includes(keyword) ||
+        String(user.enrollmentNo ?? "")
+          .toLowerCase()
+          .includes(keyword);
 
       const matchesSemester =
         semester === "" || Number(user.semester) === Number(semester);
@@ -60,6 +115,10 @@ const Users = () => {
       return matchesSearch && matchesSemester && matchesStatus;
     });
   }, [users, search, semester, status]);
+
+  // ======================================
+  // PAGINATION
+  // ======================================
 
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
 
@@ -82,21 +141,21 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* HEADER */}
 
       <div>
         <h1 className="text-3xl font-bold text-white">Student Management</h1>
 
         <p className="mt-2 text-slate-400">
-          View and manage all registered students.
+          View all students imported into Student Master.
         </p>
       </div>
 
-      {/* Search */}
+      {/* SEARCH */}
 
       <UserSearch value={search} onChange={setSearch} />
 
-      {/* Filters */}
+      {/* FILTERS */}
 
       <UserFilter
         semester={semester}
@@ -105,11 +164,11 @@ const Users = () => {
         setStatus={setStatus}
       />
 
-      {/* Table */}
+      {/* TABLE */}
 
       <UserTable users={currentData} loading={loading} refresh={loadUsers} />
 
-      {/* Pagination */}
+      {/* PAGINATION */}
 
       <UserPagination
         currentPage={currentPage}
