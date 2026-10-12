@@ -134,10 +134,19 @@ export const resetPassword = async (data) => {
 // Frontend must clear its access token
 // and redirect to login on success.
 
-export const changePassword = async ({ oldPassword, newPassword }) => {
+// ==========================================================
+// CHANGE PASSWORD
+// ==========================================================
+
+export const changePassword = async ({
+  oldPassword,
+  newPassword,
+  confirmPassword,
+}) => {
   const response = await api.put("/auth/change-password", {
     oldPassword,
     newPassword,
+    confirmPassword,
   });
 
   return getResponseData(response);

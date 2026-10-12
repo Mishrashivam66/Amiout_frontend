@@ -196,6 +196,7 @@ const ChangePassword = () => {
       await changePassword({
         oldPassword,
         newPassword,
+        confirmPassword,
       });
 
       setCompleted(true);
