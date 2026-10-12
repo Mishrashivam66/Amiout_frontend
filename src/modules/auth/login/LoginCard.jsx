@@ -163,7 +163,10 @@ const LoginCard = () => {
 
       // Reuse existing AuthContext.
       login(normalizedUser, response.accessToken);
-
+      console.log("LOGIN RESPONSE:", response);
+      console.log("USER ROLE:", primaryRole);
+      console.log("MUST CHANGE PASSWORD:", normalizedUser.mustChangePassword);
+      console.log("REDIRECT PATH:", DASHBOARD_ROUTES[primaryRole]);
       // ====================================
       // FIRST LOGIN PASSWORD CHANGE
       // ====================================
