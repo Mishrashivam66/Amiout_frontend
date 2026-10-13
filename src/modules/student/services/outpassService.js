@@ -1,73 +1,85 @@
+"use strict";
+
 import api from "../../../services/api";
 
-// ============================================================================
-// Apply Outpass
-// ============================================================================
+// ============================================================
+// APPLY OUTPASS
+// POST /outpass/apply
+// ============================================================
 
 export const applyOutpass = async (payload) => {
-  const response = await api.post("/outpass/apply", payload);
+  const response = await api.post("/outpass/apply", {
+    reason: String(payload?.reason || "").trim(),
+    destination: String(payload?.destination || "").trim(),
+    outDate: payload?.outDate,
+    outTime: payload?.outTime,
+    inTime: payload?.inTime || null,
+  });
 
   return response.data;
 };
 
-// ============================================================================
-// Get Active Outpass
-// ============================================================================
+// ============================================================
+// GET ACTIVE OUTPASS
+// ============================================================
 
 export const getActiveOutpass = async () => {
   const response = await api.get("/outpass/active");
+  return response.data;
+};
+
+// ============================================================
+// GET HISTORY
+// ============================================================
+
+export const getOutpassHistory = async (page = 1, limit = 10) => {
+  const response = await api.get("/outpass/history", {
+    params: { page, limit },
+  });
 
   return response.data;
 };
 
-// ============================================================================
-// Get History
-// ============================================================================
+// ============================================================
+// GET OUTPASS DETAILS
+// ============================================================
 
-export const getOutpassHistory = async (page = 1, limit = 10) => {
-  const response = await api.get(
-    `/outpass/history?page=${page}&limit=${limit}`,
+export const getOutpassDetails = async (outpassId) => {
+  const response = await api.get(`/outpass/${encodeURIComponent(outpassId)}`);
+
+  return response.data;
+};
+
+// ============================================================
+// CANCEL OUTPASS
+// ============================================================
+
+export const cancelOutpass = async (outpassId) => {
+  const response = await api.patch(
+    `/outpass/${encodeURIComponent(outpassId)}/cancel`,
   );
 
   return response.data;
 };
 
-// ============================================================================
-// Get Outpass Details
-// ============================================================================
-
-export const getOutpassDetails = async (outpassId) => {
-  const response = await api.get(`/outpass/${outpassId}`);
-
-  return response.data;
-};
-
-// ============================================================================
-// Cancel Outpass
-// ============================================================================
-
-export const cancelOutpass = async (outpassId) => {
-  const response = await api.patch(`/outpass/${outpassId}/cancel`);
-
-  return response.data;
-};
-
-// ============================================================================
-// Verify Exit
-// ============================================================================
+// ============================================================
+// SECURITY VERIFY EXIT
+// Kept for backward compatibility.
+// ============================================================
 
 export const verifyExit = async (outpassId) => {
   const response = await api.patch(
-    `/outpass/security/${outpassId}/verify-exit`,
+    `/outpass/security/${encodeURIComponent(outpassId)}/verify-exit`,
   );
 
   return response.data;
 };
-// ============================================================================
-// Export
-// ============================================================================
 
-export default {
+// ============================================================
+// EXPORT
+// ============================================================
+
+const outpassService = {
   applyOutpass,
   getActiveOutpass,
   getOutpassHistory,
@@ -75,3 +87,5 @@ export default {
   cancelOutpass,
   verifyExit,
 };
+
+export default outpassService;

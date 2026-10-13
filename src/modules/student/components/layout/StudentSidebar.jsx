@@ -14,7 +14,6 @@ import {
   History,
   Bell,
   Activity,
-  UserCog,
   LogOut,
   X,
 } from "lucide-react";
@@ -32,11 +31,7 @@ const navigation = [
     path: "/student/profile",
     icon: UserCircle,
   },
-  {
-    title: "Complete Profile",
-    path: "/student/complete-profile",
-    icon: UserCog,
-  },
+
   {
     title: "Apply Outpass",
     path: "/student/apply-outpass",
