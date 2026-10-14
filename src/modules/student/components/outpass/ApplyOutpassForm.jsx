@@ -32,8 +32,12 @@ const REASON_MAX = 100;
 const DESTINATION_MIN = 2;
 const DESTINATION_MAX = 100;
 
-const START_MINUTES = 9 * 60 + 15;
-const END_MINUTES = 17 * 60 + 15;
+// Testing only — production mein false rakho
+const OUTPASS_TEST_MODE =
+  import.meta.env.DEV && import.meta.env.VITE_OUTPASS_TEST_MODE === "true";
+
+const START_MINUTES = OUTPASS_TEST_MODE ? 0 : 9 * 60 + 15;
+const END_MINUTES = OUTPASS_TEST_MODE ? 24 * 60 : 17 * 60 + 15;
 const SLOT_INTERVAL = 10;
 
 // ============================================================
