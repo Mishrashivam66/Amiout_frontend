@@ -123,7 +123,7 @@ export const getOutpassDetails = async (outpassId) => {
 // ============================================================================
 
 export const getProfile = async () => {
-  const response = await api.get("/auth/mentor/me");
+  const response = await api.get("/mentor/profile");
   return response.data;
 };
 export const updateProfile = async (data) => {
