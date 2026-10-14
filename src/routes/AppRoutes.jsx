@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 // ==========================================
 // COMMON PAGES
 // ==========================================
-
+import FacultyStudents from "../modules/mentor/pages/Students";
 import LandingPage from "../modules/auth/pages/LandingPage";
 import ComingSoon from "../components/common/ComingSoon";
 import ActivateAccount from "../modules/auth/pages/ActivateAccount";
@@ -196,15 +196,6 @@ const AppRoutes = () => {
       {/* ====================================
           COORDINATOR DASHBOARD
       ==================================== */}
-
-      <Route
-        path="/coordinator/dashboard"
-        element={
-          <ProtectedRoute roles={["COORDINATOR"]}>
-            <ComingSoon />
-          </ProtectedRoute>
-        }
-      />
 
       {/* ====================================
           HOD DASHBOARD

@@ -17,6 +17,8 @@ const DASHBOARD_ROUTES = Object.freeze({
   SUPER_ADMIN: "/super-admin/dashboard",
 });
 
+const FACULTY_ROLES = new Set(["MENTOR", "COORDINATOR", "HOD", "HOI"]);
+
 // ==========================================
 // HELPERS
 // ==========================================
@@ -25,6 +27,78 @@ const normalizeRole = (role) =>
   String(role || "")
     .trim()
     .toUpperCase();
+
+const isAssignmentActive = (assignment) => {
+  if (!assignment || assignment.isActive !== true) {
+    return false;
+  }
+
+  const now = Date.now();
+
+  if (assignment.startsAt) {
+    const start = new Date(assignment.startsAt).getTime();
+
+    if (!Number.isFinite(start) || start > now) {
+      return false;
+    }
+  }
+
+  if (assignment.expiresAt) {
+    const expiry = new Date(assignment.expiresAt).getTime();
+
+    if (!Number.isFinite(expiry) || expiry <= now) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const getGrantedRoles = (user) => {
+  const declared = new Set();
+
+  if (Array.isArray(user?.roles)) {
+    user.roles.forEach((role) => {
+      const value = normalizeRole(role);
+      if (value) declared.add(value);
+    });
+  }
+
+  const primary = normalizeRole(user?.role);
+
+  if (primary) declared.add(primary);
+
+  // If the API provides actual role assignments,
+  // only active assignments can grant faculty roles.
+  if (Array.isArray(user?.roleAssignments)) {
+    const activeFacultyRoles = new Set(
+      user.roleAssignments
+        .filter(isAssignmentActive)
+        .map((assignment) => normalizeRole(assignment.role)),
+    );
+
+    return [...declared].filter(
+      (role) => !FACULTY_ROLES.has(role) || activeFacultyRoles.has(role),
+    );
+  }
+
+  // For session payloads that do not include assignments,
+  // this is a UI guard based on server-issued role claims.
+  // Backend endpoints MUST enforce actual authorization.
+  return [...declared];
+};
+
+const getFallbackRoute = (grantedRoles, preferredRole) => {
+  const preferred = normalizeRole(preferredRole);
+
+  if (grantedRoles.includes(preferred)) {
+    return DASHBOARD_ROUTES[preferred] || "/login";
+  }
+
+  const firstRole = grantedRoles.find((role) => DASHBOARD_ROUTES[role]);
+
+  return DASHBOARD_ROUTES[firstRole] || "/login";
+};
 
 // ==========================================
 // LOADING SCREEN
@@ -53,77 +127,65 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
   const location = useLocation();
 
-  // ========================================
-  // WAIT FOR AUTH INITIALIZATION
-  // ========================================
-
+  // 1. Wait for authentication
   if (loading) {
     return <AuthLoadingScreen />;
   }
 
-  // ========================================
-  // REQUIRE LOGIN
-  // ========================================
-
+  // 2. Require login
   if (!isAuthenticated || !user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{
-          from: location,
-        }}
-      />
-    );
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // ========================================
-  // RESOLVE ACTIVE ROLE
-  // ========================================
+  // 3. Resolve server-granted account roles
+  const grantedRoles = getGrantedRoles(user);
 
-  const currentRole = normalizeRole(activeRole || user.role);
+  // activeRole is a UI preference, not an authorization grant.
+  const fallbackRoute = getFallbackRoute(grantedRoles, activeRole || user.role);
 
-  // ========================================
-  // MANDATORY PASSWORD CHANGE
-  // ========================================
-
+  // 4. Mandatory first-login password change
   const mustChangePassword = user.mustChangePassword === true;
 
   const isPasswordChangeRoute = location.pathname === "/change-password";
-
-  // A temporary-password user cannot
-  // access any other protected page.
 
   if (mustChangePassword && !isPasswordChangeRoute) {
     return <Navigate to="/change-password" replace />;
   }
 
-  // ========================================
-  // PASSWORD CHANGE PAGE ACCESS
-  // ========================================
-
-  // If password setup is already complete,
-  // redirect away from the mandatory
-  // first-login page.
-
+  // 5. Prevent unnecessary password-change access
   if (isPasswordChangeRoute && !mustChangePassword) {
-    return <Navigate to={DASHBOARD_ROUTES[currentRole] || "/login"} replace />;
+    return <Navigate to={fallbackRoute} replace />;
   }
 
-  // ========================================
-  // ROLE AUTHORIZATION
-  // ========================================
-
+  // 6. Validate requested route role
   const allowedRoles = roles.map(normalizeRole);
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(currentRole)) {
-    return <Navigate to={DASHBOARD_ROUTES[currentRole] || "/login"} replace />;
+  if (allowedRoles.length > 0) {
+    const hasRequiredRole = allowedRoles.some((role) =>
+      grantedRoles.includes(role),
+    );
+
+    if (!hasRequiredRole) {
+      // Avoid repeatedly redirecting to the same route.
+      if (location.pathname === fallbackRoute) {
+        return (
+          <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-center text-white">
+            <div>
+              <h1 className="text-xl font-bold">Access Denied</h1>
+
+              <p className="mt-2 text-sm text-slate-400">
+                Your account is not authorized for this portal.
+              </p>
+            </div>
+          </main>
+        );
+      }
+
+      return <Navigate to={fallbackRoute} replace />;
+    }
   }
 
-  // ========================================
-  // AUTHORIZED ACCESS
-  // ========================================
-
+  // 7. Authorized page
   return children;
 };
 
