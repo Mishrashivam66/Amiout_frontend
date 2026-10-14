@@ -10,7 +10,7 @@ import ActivateAccount from "../modules/auth/pages/ActivateAccount";
 // ==========================================
 // COMMON AUTH
 // ==========================================
-
+import ParentReview from "../modules/auth/pages/ParentReview";
 import Login from "../modules/auth/pages/Login";
 import VerifyOTP from "../modules/auth/pages/VerifyOTP";
 import ForgotPassword from "../modules/auth/pages/ForgotPassword";
@@ -74,7 +74,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
 
       <Route path="/activate-account" element={<ActivateAccount />} />
-
+      <Route path="/parent/review/:token" element={<ParentReview />} />
       {/* ====================================
           LEGACY LOGIN REDIRECTS
       ==================================== */}

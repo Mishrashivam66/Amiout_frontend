@@ -6,12 +6,22 @@ import MentorSidebar from "./MentorSidebar";
 
 const MentorLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <MentorSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <MentorSidebar
+        open={sidebarOpen}
+        setOpen={setSidebarOpen}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
+      />
 
-      <div className="lg:ml-72 transition-all duration-300">
+      <div
+        className={`min-h-screen transition-all duration-300 ${
+          sidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
+        }`}
+      >
         <MentorNavbar onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="min-h-[calc(100vh-80px)] p-4 md:p-6 lg:p-8">

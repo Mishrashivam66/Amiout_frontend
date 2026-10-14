@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import {
@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ShieldCheck,
   GraduationCap,
-  Menu,
   X,
   LogOut,
   Users,
@@ -85,12 +84,14 @@ const COORDINATOR_MENUS = [
   },
 ];
 
-const MentorSidebar = () => {
+const MentorSidebar = ({
+  open = false,
+  setOpen = () => {},
+  collapsed = false,
+  setCollapsed = () => {},
+}) => {
   const { user, logout } = useAuth();
   const location = useLocation();
-
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isCoordinator =
     location.pathname === "/coordinator" ||
@@ -100,78 +101,98 @@ const MentorSidebar = () => {
 
   const menus = isCoordinator ? COORDINATOR_MENUS : MENTOR_MENUS;
 
+  // Close mobile sidebar when navigation changes.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, setOpen]);
+
+  // Allow Escape key to close sidebar.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, setOpen]);
+
   return (
     <>
-      {mobileOpen && (
+      {/* Mobile overlay */}
+      {open && (
         <button
           type="button"
           aria-label="Close sidebar overlay"
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
         />
       )}
 
-      <button
-        type="button"
-        aria-label="Open sidebar"
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-5 top-5 z-40 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xl lg:hidden"
-      >
-        <Menu size={22} />
-      </button>
-
+      {/* Sidebar */}
       <aside
+        aria-label={`${activeRole} navigation`}
         className={`
           fixed left-0 top-0 z-50 flex h-screen flex-col
           border-r border-slate-800
           bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950
           shadow-2xl transition-all duration-300
-          ${collapsed ? "lg:w-24" : "lg:w-72"}
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           w-72
+          ${collapsed ? "lg:w-24" : "lg:w-72"}
+          ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        <div className="border-b border-slate-700/40 p-6">
+        {/* Logo */}
+        <div className="relative border-b border-slate-700/40 p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 shadow-lg">
               <ShieldCheck size={30} className="text-white" />
             </div>
 
-            {!collapsed && (
-              <div>
-                <h1 className="text-2xl font-bold text-white">AMIOUT</h1>
+            <div className={collapsed ? "lg:hidden" : ""}>
+              <h1 className="text-2xl font-bold text-white">AMIOUT</h1>
 
-                <p className="text-sm text-slate-300">
-                  {isCoordinator ? "Coordinator Portal" : "Mentor Portal"}
-                </p>
-              </div>
-            )}
+              <p className="text-sm text-slate-300">
+                {isCoordinator ? "Coordinator Portal" : "Mentor Portal"}
+              </p>
+            </div>
           </div>
+
+          {/* Mobile close */}
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            onClick={() => setOpen(false)}
+            className="absolute right-3 top-3 rounded-xl bg-slate-800 p-2 text-slate-300 transition hover:bg-slate-700 lg:hidden"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <button
-          type="button"
-          aria-label="Close sidebar"
-          onClick={() => setMobileOpen(false)}
-          className="absolute right-4 top-4 rounded-xl bg-slate-800 p-2 text-slate-300 lg:hidden"
-        >
-          <X size={20} />
-        </button>
-
+        {/* Desktop collapse */}
         <div className="hidden justify-end px-4 pt-4 lg:flex">
           <button
             type="button"
-            aria-label="Collapse sidebar"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => setCollapsed((value) => !value)}
             className="rounded-xl bg-slate-800 p-2 text-slate-300 transition hover:bg-blue-600 hover:text-white"
           >
             <ChevronLeft
               size={18}
-              className={`transition ${collapsed ? "rotate-180" : ""}`}
+              className={`transition-transform duration-300 ${
+                collapsed ? "rotate-180" : ""
+              }`}
             />
           </button>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-4 py-6">
           <ul className="space-y-2">
             {menus.map((menu) => {
@@ -181,12 +202,13 @@ const MentorSidebar = () => {
                 <li key={menu.path}>
                   <NavLink
                     to={menu.path}
-                    onClick={() => setMobileOpen(false)}
+                    title={collapsed ? menu.title : undefined}
+                    onClick={() => setOpen(false)}
                     className={({ isActive }) => `
                       group relative flex items-center
-                      ${collapsed ? "justify-center" : "justify-between"}
                       rounded-2xl px-4 py-3
                       transition-all duration-300
+                      ${collapsed ? "lg:justify-center" : "lg:justify-between"}
                       ${
                         isActive
                           ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-900/30"
@@ -196,9 +218,9 @@ const MentorSidebar = () => {
                   >
                     {({ isActive }) => (
                       <>
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
                           <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                               isActive
                                 ? "bg-white/20"
                                 : "bg-slate-800 group-hover:bg-slate-700"
@@ -207,15 +229,21 @@ const MentorSidebar = () => {
                             <Icon size={20} />
                           </div>
 
-                          {!collapsed && (
-                            <span className="font-medium tracking-wide">
-                              {menu.title}
-                            </span>
-                          )}
+                          <span
+                            className={`font-medium tracking-wide ${
+                              collapsed ? "lg:hidden" : ""
+                            }`}
+                          >
+                            {menu.title}
+                          </span>
                         </div>
 
-                        {!collapsed && menu.badge && (
-                          <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white">
+                        {menu.badge && (
+                          <span
+                            className={`ml-auto rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white ${
+                              collapsed ? "lg:hidden" : ""
+                            }`}
+                          >
                             {menu.badge}
                           </span>
                         )}
@@ -228,33 +256,39 @@ const MentorSidebar = () => {
           </ul>
         </nav>
 
+        {/* Faculty information and logout */}
         <div className="border-t border-slate-800 p-4">
-          {!collapsed && (
-            <div className="mb-4 rounded-2xl bg-slate-800/60 p-4">
-              <p className="truncate text-sm font-semibold text-white">
-                {user?.name || "Faculty"}
-              </p>
+          <div
+            className={`mb-4 rounded-2xl bg-slate-800/60 p-4 ${
+              collapsed ? "lg:hidden" : ""
+            }`}
+          >
+            <p className="truncate text-sm font-semibold text-white">
+              {user?.name || "Faculty"}
+            </p>
 
-              <p className="truncate text-xs text-slate-400">
-                {user?.email || ""}
-              </p>
+            <p className="truncate text-xs text-slate-400">
+              {user?.email || ""}
+            </p>
 
-              <p className="mt-2 text-xs font-semibold text-cyan-300">
-                {activeRole}
-              </p>
-            </div>
-          )}
+            <p className="mt-2 text-xs font-semibold text-cyan-300">
+              {activeRole}
+            </p>
+          </div>
 
           <button
             type="button"
-            onClick={logout}
-            className={`flex w-full items-center ${
-              collapsed ? "justify-center" : "justify-start gap-3"
-            } rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 font-medium text-white shadow-lg transition hover:from-red-600 hover:to-red-700`}
+            onClick={() => {
+              setOpen(false);
+              logout();
+            }}
+            className={`flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 font-medium text-white shadow-lg transition hover:from-red-600 hover:to-red-700 ${
+              collapsed ? "lg:justify-center" : ""
+            }`}
           >
-            <LogOut size={20} />
+            <LogOut size={20} className="shrink-0" />
 
-            {!collapsed && <span>Logout</span>}
+            <span className={collapsed ? "lg:hidden" : ""}>Logout</span>
           </button>
         </div>
       </aside>
