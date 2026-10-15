@@ -174,12 +174,40 @@ export const unlockStudent = async (studentId) => {
 };
 
 export const updateAvailability = async (availabilityStatus) => {
-  const response = await api.patch("/mentor/availability", {
-    availabilityStatus,
-  });
+  try {
+    const response = await api.patch(
+      "/mentor/availability",
+      { availabilityStatus },
+      {
+        timeout: 15000,
+      },
+    );
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    console.error("[MENTOR AVAILABILITY ERROR]", {
+      message: error.message,
+      status: error.response?.status,
+      code: error.code,
+      response: error.response?.data,
+    });
+
+    if (error.code === "ECONNABORTED") {
+      throw new Error(
+        "Availability request timed out. Refresh your profile to check whether the status was saved.",
+        { cause: error },
+      );
+    }
+
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "Unable to update faculty availability.",
+      { cause: error },
+    );
+  }
 };
+
 export default {
   getDashboard,
   getPendingRequests,
