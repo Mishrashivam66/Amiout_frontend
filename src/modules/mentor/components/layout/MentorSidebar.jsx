@@ -17,6 +17,10 @@ import {
 
 import { useAuth } from "../../../../context/AuthContext";
 
+// ==========================================
+// MENTOR MENU
+// ==========================================
+
 const MENTOR_MENUS = [
   {
     title: "Dashboard",
@@ -51,6 +55,10 @@ const MENTOR_MENUS = [
   },
 ];
 
+// ==========================================
+// COORDINATOR MENU
+// ==========================================
+
 const COORDINATOR_MENUS = [
   {
     title: "Dashboard",
@@ -84,11 +92,15 @@ const COORDINATOR_MENUS = [
   },
 ];
 
+// ==========================================
+// SIDEBAR COMPONENT
+// ==========================================
+
 const MentorSidebar = ({
   open = false,
-  setOpen = () => {},
+  setOpen,
   collapsed = false,
-  setCollapsed = () => {},
+  setCollapsed,
 }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -101,87 +113,148 @@ const MentorSidebar = ({
 
   const menus = isCoordinator ? COORDINATOR_MENUS : MENTOR_MENUS;
 
-  // Close mobile sidebar when navigation changes.
+  const closeSidebar = () => {
+    setOpen?.(false);
+  };
+
+  // ==========================================
+  // CLOSE ON ROUTE CHANGE
+  // ==========================================
+
   useEffect(() => {
-    setOpen(false);
+    setOpen?.(false);
   }, [location.pathname, setOpen]);
 
-  // Allow Escape key to close sidebar.
+  // ==========================================
+  // ESC KEY + PREVENT BACKGROUND SCROLL
+  // ==========================================
+
   useEffect(() => {
     if (!open) return;
 
-    const handleKeyDown = (event) => {
+    const handleEscape = (event) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        setOpen?.(false);
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    window.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
     };
   }, [open, setOpen]);
 
+  // ==========================================
+  // JSX
+  // ==========================================
+
   return (
     <>
-      {/* Mobile overlay */}
+      {/* MOBILE OVERLAY */}
       {open && (
         <button
           type="button"
-          aria-label="Close sidebar overlay"
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          aria-label="Close navigation overlay"
+          onClick={closeSidebar}
+          className="
+            fixed inset-0 z-[90]
+            bg-slate-950/65
+            backdrop-blur-sm
+            lg:hidden
+          "
         />
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <aside
+        id="faculty-sidebar"
         aria-label={`${activeRole} navigation`}
         className={`
-          fixed left-0 top-0 z-50 flex h-screen flex-col
+          fixed inset-y-0 left-0 z-[100]
+          flex h-screen w-72 flex-col
           border-r border-slate-800
-          bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950
-          shadow-2xl transition-all duration-300
-          w-72
+          bg-gradient-to-b
+          from-slate-950 via-slate-900 to-slate-950
+          shadow-2xl
+
+          transform-gpu
+          transition-transform duration-300 ease-in-out
+
           ${collapsed ? "lg:w-24" : "lg:w-72"}
-          ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+
+          ${open ? "translate-x-0" : "-translate-x-full"}
+
+          lg:translate-x-0
         `}
       >
-        {/* Logo */}
-        <div className="relative border-b border-slate-700/40 p-6">
+        {/* =====================================
+            LOGO / HEADER
+        ===================================== */}
+
+        <div className="relative shrink-0 border-b border-slate-700/40 px-5 py-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 shadow-lg">
-              <ShieldCheck size={30} className="text-white" />
+            <div
+              className="
+                flex h-12 w-12 shrink-0
+                items-center justify-center
+                rounded-2xl
+                bg-gradient-to-br from-blue-500 to-cyan-400
+                shadow-lg shadow-blue-500/20
+              "
+            >
+              <ShieldCheck size={27} className="text-white" />
             </div>
 
             <div className={collapsed ? "lg:hidden" : ""}>
-              <h1 className="text-2xl font-bold text-white">AMIOUT</h1>
+              <h1 className="text-2xl font-extrabold tracking-wide text-white">
+                AMIOUT
+              </h1>
 
-              <p className="text-sm text-slate-300">
+              <p className="text-xs font-medium text-slate-400">
                 {isCoordinator ? "Coordinator Portal" : "Mentor Portal"}
               </p>
             </div>
           </div>
 
-          {/* Mobile close */}
+          {/* MOBILE CLOSE */}
           <button
             type="button"
             aria-label="Close sidebar"
-            onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 rounded-xl bg-slate-800 p-2 text-slate-300 transition hover:bg-slate-700 lg:hidden"
+            onClick={closeSidebar}
+            className="
+              absolute right-3 top-3
+              flex h-9 w-9 items-center justify-center
+              rounded-xl border border-slate-700
+              bg-slate-800 text-slate-300
+              transition hover:bg-slate-700 hover:text-white
+              lg:hidden
+            "
           >
-            <X size={20} />
+            <X size={19} />
           </button>
         </div>
 
-        {/* Desktop collapse */}
-        <div className="hidden justify-end px-4 pt-4 lg:flex">
+        {/* =====================================
+            DESKTOP COLLAPSE
+        ===================================== */}
+
+        <div className="hidden shrink-0 justify-end px-4 pt-4 lg:flex">
           <button
             type="button"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((value) => !value)}
-            className="rounded-xl bg-slate-800 p-2 text-slate-300 transition hover:bg-blue-600 hover:text-white"
+            onClick={() => setCollapsed?.((previous) => !previous)}
+            className="
+              flex h-9 w-9 items-center justify-center
+              rounded-xl border border-slate-700
+              bg-slate-800 text-slate-300
+              transition hover:bg-blue-600 hover:text-white
+            "
           >
             <ChevronLeft
               size={18}
@@ -192,9 +265,28 @@ const MentorSidebar = ({
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6">
-          <ul className="space-y-2">
+        {/* =====================================
+            NAVIGATION
+        ===================================== */}
+
+        <nav
+          className="
+            min-h-0 flex-1
+            overflow-y-auto
+            px-3 py-5
+            scrollbar-thin
+            scrollbar-thumb-slate-700
+          "
+        >
+          <p
+            className={`mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 ${
+              collapsed ? "lg:hidden" : ""
+            }`}
+          >
+            Main Navigation
+          </p>
+
+          <ul className="space-y-1.5">
             {menus.map((menu) => {
               const Icon = menu.icon;
 
@@ -203,44 +295,51 @@ const MentorSidebar = ({
                   <NavLink
                     to={menu.path}
                     title={collapsed ? menu.title : undefined}
-                    onClick={() => setOpen(false)}
+                    onClick={closeSidebar}
                     className={({ isActive }) => `
-                      group relative flex items-center
-                      rounded-2xl px-4 py-3
-                      transition-all duration-300
-                      ${collapsed ? "lg:justify-center" : "lg:justify-between"}
+                      group relative flex min-h-12
+                      items-center gap-3
+                      rounded-xl px-3 py-2.5
+                      transition-all duration-200
+
+                      ${collapsed ? "lg:justify-center" : ""}
+
                       ${
                         isActive
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl shadow-blue-900/30"
-                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          ? "bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-900/30"
+                          : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                       }
                     `}
                   >
                     {({ isActive }) => (
                       <>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        <div
+                          className={`
+                            flex h-9 w-9 shrink-0
+                            items-center justify-center
+                            rounded-lg transition-colors
+
+                            ${
                               isActive
                                 ? "bg-white/20"
                                 : "bg-slate-800 group-hover:bg-slate-700"
-                            }`}
-                          >
-                            <Icon size={20} />
-                          </div>
-
-                          <span
-                            className={`font-medium tracking-wide ${
-                              collapsed ? "lg:hidden" : ""
-                            }`}
-                          >
-                            {menu.title}
-                          </span>
+                            }
+                          `}
+                        >
+                          <Icon size={19} />
                         </div>
+
+                        <span
+                          className={`flex-1 text-sm font-semibold tracking-wide ${
+                            collapsed ? "lg:hidden" : ""
+                          }`}
+                        >
+                          {menu.title}
+                        </span>
 
                         {menu.badge && (
                           <span
-                            className={`ml-auto rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-bold uppercase text-white ${
+                            className={`rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold uppercase text-white ${
                               collapsed ? "lg:hidden" : ""
                             }`}
                           >
@@ -256,37 +355,65 @@ const MentorSidebar = ({
           </ul>
         </nav>
 
-        {/* Faculty information and logout */}
-        <div className="border-t border-slate-800 p-4">
+        {/* =====================================
+            FACULTY PROFILE / LOGOUT
+        ===================================== */}
+
+        <div className="shrink-0 border-t border-slate-800 p-4">
           <div
-            className={`mb-4 rounded-2xl bg-slate-800/60 p-4 ${
+            className={`mb-4 rounded-2xl border border-slate-700/50 bg-slate-800/60 p-4 ${
               collapsed ? "lg:hidden" : ""
             }`}
           >
-            <p className="truncate text-sm font-semibold text-white">
-              {user?.name || "Faculty"}
-            </p>
+            <div className="flex items-center gap-3">
+              <div
+                className="
+                  flex h-10 w-10 shrink-0
+                  items-center justify-center
+                  rounded-full
+                  bg-gradient-to-br from-blue-500 to-indigo-600
+                  text-sm font-bold text-white
+                "
+              >
+                {user?.name?.charAt(0)?.toUpperCase() || "F"}
+              </div>
 
-            <p className="truncate text-xs text-slate-400">
-              {user?.email || ""}
-            </p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-white">
+                  {user?.name || "Faculty"}
+                </p>
 
-            <p className="mt-2 text-xs font-semibold text-cyan-300">
-              {activeRole}
-            </p>
+                <p className="truncate text-xs text-slate-400">
+                  {user?.email || ""}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <span className="inline-flex rounded-lg bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold tracking-wider text-cyan-300">
+                {activeRole}
+              </span>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={() => {
-              setOpen(false);
+              closeSidebar();
               logout();
             }}
-            className={`flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 px-4 py-3 font-medium text-white shadow-lg transition hover:from-red-600 hover:to-red-700 ${
-              collapsed ? "lg:justify-center" : ""
-            }`}
+            className={`
+              flex w-full items-center
+              gap-3 rounded-xl
+              bg-gradient-to-r from-red-600 to-rose-600
+              px-4 py-3 text-sm font-bold text-white
+              shadow-lg shadow-red-950/20
+              transition hover:from-red-700 hover:to-rose-700
+
+              ${collapsed ? "lg:justify-center" : ""}
+            `}
           >
-            <LogOut size={20} className="shrink-0" />
+            <LogOut size={19} className="shrink-0" />
 
             <span className={collapsed ? "lg:hidden" : ""}>Logout</span>
           </button>

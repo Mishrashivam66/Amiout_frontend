@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom";
 import { useState } from "react";
+import { Outlet } from "react-router-dom";
 
 import MentorNavbar from "./MentorNavbar";
 import MentorSidebar from "./MentorSidebar";
@@ -18,7 +18,7 @@ const MentorLayout = () => {
       />
 
       <div
-        className={`min-h-screen transition-all duration-300 ${
+        className={`min-h-screen transition-[margin] duration-300 ${
           sidebarCollapsed ? "lg:ml-24" : "lg:ml-72"
         }`}
       >
