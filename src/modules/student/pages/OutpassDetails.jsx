@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import DigitalOutpassQR from "../components/DigitalOutpassQR";
 import {
   ArrowLeft,
   XCircle,
@@ -23,8 +24,6 @@ const OutpassDetails = () => {
   const { loading, fetchOutpassDetails, cancelOutpass } = useOutpass();
 
   const [outpass, setOutpass] = useState(null);
-
-  const [showGateMessage, setShowGateMessage] = useState(true);
   // ==========================================================
   // Load Outpass
   // ==========================================================
@@ -287,6 +286,9 @@ const OutpassDetails = () => {
       {/* ========================================================== */}
       {/* QR Code */}
       {/* ========================================================== */}
+      {/* ==========================================================
+    DIGITAL OUTPASS - QR CODE
+========================================================== */}
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
         <div className="mb-6 flex items-center gap-3">
@@ -294,60 +296,18 @@ const OutpassDetails = () => {
             <ShieldCheck className="text-green-700" size={22} />
           </div>
 
-          <h3 className="text-xl font-bold text-slate-800">
-            Gate Exit Verification
-          </h3>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800">
+              Digital Outpass
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              View your approved digital outpass and secure QR code
+            </p>
+          </div>
         </div>
 
-        {outpass.status === "APPROVED" ? (
-          <div className="flex flex-col items-center">
-            <div className="mb-6 rounded-full bg-green-100 p-5">
-              <ShieldCheck size={70} className="text-green-700" />
-            </div>
-
-            <h4 className="text-xl font-bold text-slate-800">
-              Outpass Approved
-            </h4>
-
-            <p className="mt-3 max-w-md text-center text-sm leading-6 text-slate-600">
-              Your outpass has been approved by the mentor. Before leaving the
-              campus, this outpass must be verified at the main gate.
-            </p>
-            {showGateMessage && (
-              <div className="rounded-3xl border bg-white p-8">
-                {/* Existing Content */}
-
-                <button
-                  onClick={() => setShowGateMessage(false)}
-                  className="mt-8 rounded-xl bg-green-600 px-10 py-3 font-semibold text-white transition hover:bg-green-700"
-                >
-                  ✅ OK
-                </button>
-              </div>
-            )}
-
-            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-center">
-              <p className="font-semibold text-red-700">
-                ⚠ Student is NOT allowed to click this button.
-              </p>
-
-              <p className="mt-2 text-sm text-red-600">
-                This button is strictly for verification by the Security Guard
-                at the Main Gate. Unauthorized use is prohibited. Students must
-                never leave the campus without security verification.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl bg-slate-100 p-8 text-center">
-            <ShieldCheck size={60} className="mx-auto mb-4 text-slate-400" />
-
-            <p className="font-medium text-slate-600">
-              Gate verification will be available after your outpass is approved
-              by the mentor.
-            </p>
-          </div>
-        )}
+        <DigitalOutpassQR outpass={outpass} />
       </div>
 
       {/* Part 4 Starts Here */}
