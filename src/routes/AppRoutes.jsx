@@ -7,6 +7,7 @@ import FacultyStudents from "../modules/mentor/pages/Students";
 import LandingPage from "../modules/auth/pages/LandingPage";
 import ComingSoon from "../components/common/ComingSoon";
 import ActivateAccount from "../modules/auth/pages/ActivateAccount";
+import SecurityDashboard from "../pages/Security/SecurityDashboard";
 // ==========================================
 // COMMON AUTH
 // ==========================================
@@ -45,7 +46,7 @@ import Settings from "../modules/admin/pages/Settings";
 import MentorList from "../modules/admin/pages/Mentors/MentorList";
 import Outpasses from "../modules/admin/pages/Outpasses";
 import Notifications from "../modules/admin/pages/Notifications";
-
+import SecurityGuards from "../modules/admin/pages/SecurityGuards";
 // ==========================================
 // MENTOR MODULE
 // ==========================================
@@ -75,6 +76,7 @@ const AppRoutes = () => {
 
       <Route path="/activate-account" element={<ActivateAccount />} />
       <Route path="/parent/review/:token" element={<ParentReview />} />
+
       {/* ====================================
           LEGACY LOGIN REDIRECTS
       ==================================== */}
@@ -179,6 +181,7 @@ const AppRoutes = () => {
         <Route path="outpasses" element={<Outpasses />} />
 
         <Route path="notifications" element={<Notifications />} />
+        <Route path="security-guards" element={<SecurityGuards />} />
       </Route>
 
       {/* ====================================
@@ -231,7 +234,7 @@ const AppRoutes = () => {
         path="/security/dashboard"
         element={
           <ProtectedRoute roles={["SECURITY"]}>
-            <ComingSoon />
+            <SecurityDashboard />
           </ProtectedRoute>
         }
       />

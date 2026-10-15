@@ -11,7 +11,10 @@ import {
   FaCog,
   FaSignOutAlt,
   FaUserShield,
+  FaShieldAlt,
 } from "react-icons/fa";
+
+import api from "../../../../services/api";
 
 const menuItems = [
   {
@@ -28,6 +31,11 @@ const menuItems = [
     name: "Mentors",
     path: "/admin/mentors",
     icon: FaUserGraduate,
+  },
+  {
+    name: "Security Guards",
+    path: "/admin/security-guards",
+    icon: FaShieldAlt,
   },
   {
     name: "Outpasses",
@@ -59,23 +67,26 @@ const menuItems = [
 const Sidebar = ({ closeSidebar }) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Token aur user data remove karo
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error(
+        "Logout request failed:",
+        error.response?.data?.message || error.message,
+      );
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-    // Agar aur data save hai to ye bhi kar sakte ho
-    // localStorage.clear();
-
-    // Login page par bhejo
-    navigate("/login");
+      closeSidebar?.();
+      navigate("/login", { replace: true });
+    }
   };
+
   return (
     <div className="flex h-full flex-col bg-[#081018] text-white">
-      {/* ====================================================== */}
       {/* Logo */}
-      {/* ====================================================== */}
-
       <div className="flex items-center gap-3 border-b border-[#1E293B] px-6 py-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-600 to-emerald-500 shadow-lg">
           <FaUserShield className="text-2xl text-white" />
@@ -88,10 +99,7 @@ const Sidebar = ({ closeSidebar }) => {
         </div>
       </div>
 
-      {/* ====================================================== */}
       {/* Navigation */}
-      {/* ====================================================== */}
-
       <nav className="flex-1 overflow-y-auto px-4 py-6">
         <ul className="space-y-2">
           {menuItems.map((item) => {
@@ -101,9 +109,8 @@ const Sidebar = ({ closeSidebar }) => {
               <li key={item.name}>
                 <NavLink
                   to={item.path}
-                  onClick={closeSidebar}
-                  className={({ isActive }) =>
-                    `
+                  onClick={() => closeSidebar?.()}
+                  className={({ isActive }) => `
                     flex items-center gap-4 rounded-xl px-4 py-3
                     transition-all duration-300
                     ${
@@ -111,11 +118,9 @@ const Sidebar = ({ closeSidebar }) => {
                         ? "bg-green-600 text-white shadow-lg"
                         : "text-slate-300 hover:bg-[#122131] hover:text-green-400"
                     }
-                  `
-                  }
+                  `}
                 >
                   <Icon className="text-lg" />
-
                   <span className="font-medium">{item.name}</span>
                 </NavLink>
               </li>
@@ -124,10 +129,7 @@ const Sidebar = ({ closeSidebar }) => {
         </ul>
       </nav>
 
-      {/* ====================================================== */}
       {/* Admin Profile */}
-      {/* ====================================================== */}
-
       <div className="border-t border-[#1E293B] p-5">
         <div className="rounded-2xl border border-[#1E293B] bg-[#0F1724] p-4">
           <div className="flex items-center gap-4">
@@ -137,28 +139,14 @@ const Sidebar = ({ closeSidebar }) => {
 
             <div>
               <h3 className="font-semibold">Admin Officer</h3>
-
-              <p className="text-xs text-slate-400">Super Admin</p>
+              <p className="text-xs text-slate-400">Administrator</p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleLogout}
-            className="
-    mt-5
-    flex
-    w-full
-    items-center
-    justify-center
-    gap-3
-    rounded-xl
-    bg-red-600
-    py-3
-    font-medium
-    transition-all
-    duration-300
-    hover:bg-red-700
-  "
+            className="mt-5 flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 py-3 font-medium transition-all duration-300 hover:bg-red-700"
           >
             <FaSignOutAlt />
             Logout
