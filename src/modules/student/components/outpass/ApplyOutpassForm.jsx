@@ -43,8 +43,9 @@ const makeTimeSlots = (lastMinute) =>
     },
   );
 
+// Backend OUT_TIME_SLOTS ke saath exact match
 const EXIT_SLOTS = makeTimeSlots(LAST_EXIT_MINUTE);
-const RETURN_SLOTS = makeTimeSlots(GATE_CUTOFF_MINUTE);
+const RETURN_SLOTS = makeTimeSlots(LAST_EXIT_MINUTE);
 
 const getISTPart = (date, part) => {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -234,7 +235,7 @@ const ApplyOutpassForm = ({
       );
       if (!plannedReturn || plannedReturn.minutes <= exit.minutes) {
         toast.error(
-          "Expected In Time must be after Out Time and no later than 5:15 PM.",
+          "Expected In Time must be after Out Time and no later than 5:05 PM.",
         );
         return false;
       }
