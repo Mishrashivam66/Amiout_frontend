@@ -1,4 +1,7 @@
+"use strict";
+
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { Html5Qrcode } from "html5-qrcode";
 
 import {
@@ -16,14 +19,19 @@ import {
   CalendarDays,
   Clock3,
   Info,
+  Users,
+  Phone,
+  BadgeCheck,
+  UserCheck,
+  Building2,
 } from "lucide-react";
 
 import api from "../../services/api";
 
 // ============================================================
 // QR FORMAT READER
-// Local decoding is NOT security verification.
-// Signature, approval, and validity must be checked by backend.
+// This only reads QR format.
+// Actual validation happens on the backend.
 // ============================================================
 
 const readQRPayload = (rawValue) => {
@@ -31,9 +39,7 @@ const readQRPayload = (rawValue) => {
     const token = String(rawValue || "").trim();
     const parts = token.split(".");
 
-    if (parts.length !== 2) {
-      return null;
-    }
+    if (parts.length !== 2) return null;
 
     const encoded = parts[0].replace(/-/g, "+").replace(/_/g, "/");
 
@@ -59,8 +65,7 @@ const readQRPayload = (rawValue) => {
 };
 
 // ============================================================
-// RESPONSE HELPERS
-// Support flat and nested response structures.
+// FORMAT HELPERS
 // ============================================================
 
 const firstValue = (...values) => {
@@ -74,20 +79,18 @@ const firstValue = (...values) => {
 };
 
 const formatValue = (value) => {
-  if (value === null || value === undefined) {
+  if (value === null || value === undefined || value === "") {
     return "Not available";
   }
 
   if (typeof value === "object") {
-    return "Not available";
+    return firstValue(value.name, value.title, value.code) || "Not available";
   }
 
-  const formatted = String(value).trim();
-
-  return formatted || "Not available";
+  return String(value);
 };
 
-const formatDate = (value) => {
+const formatDate = (value, withTime = false) => {
   if (!value) return "Not available";
 
   const date = new Date(value);
@@ -101,32 +104,61 @@ const formatDate = (value) => {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    ...(withTime
+      ? {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }
+      : {}),
   }).format(date);
 };
+
+const formatConsentMethod = (method) => {
+  if (method === "SMS_LINK") {
+    return "Parent SMS Approval Link";
+  }
+
+  if (method === "PHONE_CALL") {
+    return "Verified Phone Call";
+  }
+
+  return formatValue(method);
+};
+
+// ============================================================
+// NORMALIZE BACKEND RESPONSE
+// ============================================================
 
 const normalizeVerifiedData = (rawData) => {
   const data = rawData?.outpass || rawData || {};
 
   const student =
-    typeof data.student === "object" && data.student !== null
-      ? data.student
-      : {};
+    data.student && typeof data.student === "object" ? data.student : {};
 
-  const studentInfo = data.studentInfo || data.studentDetails || {};
+  const parent =
+    data.parent && typeof data.parent === "object" ? data.parent : {};
 
-  const identity = data.identity || {};
+  const parentDecision = data.parentDecision || data.parentApproval || {};
 
-  const approvals = data.approvals || {};
+  const universityApproval =
+    data.universityApproval || data.facultyApproval || {};
+
+  const approvingFaculty = firstValue(
+    universityApproval.approvedBy,
+    data.approvedByFaculty,
+  );
+
+  const phoneVerifier = firstValue(
+    parentDecision.verifiedByFaculty,
+    parentDecision.verifiedBy,
+  );
 
   return {
     studentName: firstValue(
       data.studentName,
-      data.name,
       student.name,
-      student.studentName,
-      studentInfo.name,
-      studentInfo.studentName,
-      identity.name,
+      data.studentInfo?.name,
     ),
 
     enrollmentNumber: firstValue(
@@ -134,38 +166,79 @@ const normalizeVerifiedData = (rawData) => {
       data.enrollmentNo,
       student.enrollmentNumber,
       student.enrollmentNo,
-      studentInfo.enrollmentNumber,
-      studentInfo.enrollmentNo,
-      identity.enrollmentNumber,
     ),
+
+    course: firstValue(student.course, data.course, data.academic?.program),
+
+    semester: firstValue(student.semester, data.semester),
+
+    section: firstValue(student.section, data.section),
+
+    group: firstValue(student.group, data.group),
+
+    institute: firstValue(data.academic?.institute, data.institute),
 
     outpassId: firstValue(data.outpassId, data.passNumber),
 
     status: firstValue(data.status, data.movementStatus, rawData?.status),
 
-    destination: firstValue(data.destination, data.leaveDetails?.destination),
+    destination: data.destination,
+    reason: data.reason,
+    outDate: data.outDate,
+    outTime: data.outTime,
+    inTime: data.inTime,
 
-    reason: firstValue(data.reason, data.leaveDetails?.reason),
+    parentName: parent.name,
 
-    outDate: firstValue(data.outDate, data.leaveDetails?.outDate),
+    parentMobile: parent.mobileNumber,
 
-    outTime: firstValue(data.outTime, data.leaveDetails?.outTime),
+    parentStatus: firstValue(parentDecision.status, data.parentApprovalStatus),
 
-    parentStatus: firstValue(
-      data.parentDecision?.status,
-      data.parentApprovalStatus,
-      approvals.parentStatus,
-      approvals.parent,
+    parentMethod: parentDecision.method,
+
+    parentDecidedAt: firstValue(
+      parentDecision.decidedAt,
+      parentDecision.approvedAt,
     ),
 
-    qrValidFrom: firstValue(data.qrValidFrom),
+    parentVerifiedBy: phoneVerifier,
 
-    qrExpiresAt: firstValue(data.qrExpiresAt),
+    parentVerifiedByRole: parentDecision.verifiedByRole,
+
+    parentCallVerifiedAt: parentDecision.callVerifiedAt,
+
+    universityStatus: universityApproval.status,
+
+    universityApprovedBy: approvingFaculty,
+
+    universityRole: firstValue(
+      universityApproval.role,
+      universityApproval.approvedAuthorityRole,
+      data.approvedAuthorityRole,
+    ),
+
+    universityApprovedAt: firstValue(
+      universityApproval.approvedAt,
+      data.approvedAt,
+    ),
+
+    universityRemark: firstValue(universityApproval.remark, ""),
+
+    qrValidFrom: data.qrValidFrom,
+    qrExpiresAt: data.qrExpiresAt,
+
+    exitVerified: data.exitVerified === true,
+
+    exitVerifiedAt: data.exitVerifiedAt,
+
+    entryVerified: data.entryVerified === true,
+
+    entryVerifiedAt: data.entryVerifiedAt,
   };
 };
 
 // ============================================================
-// COMPONENTS
+// REUSABLE COMPONENTS
 // ============================================================
 
 const DetailItem = ({ icon: Icon, label, value }) => (
@@ -186,14 +259,46 @@ const DetailItem = ({ icon: Icon, label, value }) => (
   </div>
 );
 
+const InfoSection = ({ title, icon: Icon, children }) => (
+  <section className="overflow-hidden rounded-[24px] border border-slate-700 bg-slate-900">
+    <div className="flex items-center gap-3 border-b border-slate-700 bg-slate-800/70 px-5 py-4">
+      <Icon size={21} className="text-cyan-400" />
+
+      <h3 className="font-bold text-white">{title}</h3>
+    </div>
+
+    <div className="grid gap-3 p-4 sm:grid-cols-2">{children}</div>
+  </section>
+);
+
+const StatusBadge = ({ value }) => {
+  const status = String(value || "").toUpperCase();
+
+  const style =
+    status === "APPROVED" || status === "RETURNED" || status === "EXITED"
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+      : status === "REJECTED"
+        ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+        : "bg-amber-500/15 text-amber-300 border-amber-500/30";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold ${style}`}
+    >
+      {formatValue(value)}
+    </span>
+  );
+};
+
 // ============================================================
 // SECURITY DASHBOARD
 // ============================================================
 
 const SecurityDashboard = () => {
   const scannerRef = useRef(null);
+
   const scanLockRef = useRef(false);
-  const mountedRef = useRef(true);
+  const mountedRef = useRef(false);
   const requestLockRef = useRef(false);
 
   const [scanMode, setScanMode] = useState("EXIT");
@@ -205,22 +310,25 @@ const SecurityDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
   const [verifiedData, setVerifiedData] = useState(null);
 
   // ==========================================================
-  // STOP CAMERA
+  // STOP SCANNER
   // ==========================================================
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
 
     scannerRef.current = null;
-    scanLockRef.current = true;
 
     if (!scanner) {
+      scanLockRef.current = false;
+
       if (mountedRef.current) {
         setScanning(false);
       }
+
       return;
     }
 
@@ -235,18 +343,18 @@ const SecurityDashboard = () => {
     try {
       await scanner.clear();
     } catch (err) {
-      console.warn("Scanner cleanup:", err);
+      console.warn("Scanner clear:", err);
     }
+
+    scanLockRef.current = false;
 
     if (mountedRef.current) {
       setScanning(false);
     }
-
-    scanLockRef.current = false;
   }, []);
 
   // ==========================================================
-  // CAMERA CLEANUP
+  // UNMOUNT CLEANUP
   // ==========================================================
 
   useEffect(() => {
@@ -259,7 +367,7 @@ const SecurityDashboard = () => {
       scannerRef.current = null;
 
       if (scanner) {
-        const cleanup = async () => {
+        void (async () => {
           try {
             if (scanner.isScanning) {
               await scanner.stop();
@@ -267,11 +375,9 @@ const SecurityDashboard = () => {
 
             await scanner.clear();
           } catch (err) {
-            console.warn("Camera cleanup:", err);
+            console.warn("Scanner cleanup:", err);
           }
-        };
-
-        void cleanup();
+        })();
       }
     };
   }, []);
@@ -293,7 +399,7 @@ const SecurityDashboard = () => {
   };
 
   // ==========================================================
-  // SCAN RESULT
+  // QR SCANNED
   // ==========================================================
 
   const handleScannedToken = (rawToken) => {
@@ -316,7 +422,7 @@ const SecurityDashboard = () => {
     setOutpassId(payload.outpassId);
 
     setMessage(
-      "QR scanned. Review the request and confirm to verify with the server.",
+      "QR scanned. Confirm verification to validate the QR with AMIOUT backend.",
     );
   };
 
@@ -325,7 +431,12 @@ const SecurityDashboard = () => {
   // ==========================================================
 
   const startScanner = async () => {
-    if (scannerRef.current || scanLockRef.current || loading) {
+    if (
+      scannerRef.current ||
+      scanLockRef.current ||
+      loading ||
+      requestLockRef.current
+    ) {
       return;
     }
 
@@ -378,18 +489,33 @@ const SecurityDashboard = () => {
         setScanning(true);
       }
     } catch (err) {
-      console.error("QR Camera Start Error:", err);
+      console.error("QR camera error:", err);
 
       if (scannerRef.current === scanner) {
         scannerRef.current = null;
       }
 
       scanLockRef.current = false;
-      setScanning(false);
 
-      setError(
-        "Unable to start camera. Check permissions and HTTPS connection.",
-      );
+      if (scanner) {
+        try {
+          if (scanner.isScanning) {
+            await scanner.stop();
+          }
+
+          await scanner.clear();
+        } catch (cleanupError) {
+          console.warn("Camera cleanup:", cleanupError);
+        }
+      }
+
+      if (mountedRef.current) {
+        setScanning(false);
+
+        setError(
+          "Unable to start camera. Check camera permission and HTTPS connection.",
+        );
+      }
     }
   };
 
@@ -403,9 +529,6 @@ const SecurityDashboard = () => {
     }
 
     setScanMode(mode);
-
-    // A token scanned in one mode must not be
-    // silently reused after changing the mode.
     setQrToken("");
     setOutpassId("");
     setVerifiedData(null);
@@ -415,7 +538,7 @@ const SecurityDashboard = () => {
 
   // ==========================================================
   // VERIFY EXIT / ENTRY
-  // Backend performs all authorization and security checks.
+  // Backend validates token, approvals, permissions and time.
   // ==========================================================
 
   const verifyOutpass = async () => {
@@ -458,15 +581,14 @@ const SecurityDashboard = () => {
       });
 
       setMessage(
-        response.data.message || `Student ${scanMode} verified successfully.`,
+        response.data?.message || `Student ${scanMode} verified successfully.`,
       );
 
-      // Token is cleared after successful movement
-      // so the guard cannot accidentally resubmit.
+      // Avoid accidental duplicate request.
       setQrToken("");
       setOutpassId("");
     } catch (err) {
-      console.error("Security QR Verification Error:", err);
+      console.error("Security verification error:", err);
 
       setError(
         err.response?.data?.message || err.message || "QR verification failed.",
@@ -510,40 +632,43 @@ const SecurityDashboard = () => {
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            Scan an approved student outpass and confirm EXIT or ENTRY at the
-            security gate.
+            Scan an approved outpass and verify student EXIT or ENTRY.
           </p>
         </div>
 
         {/* MODE */}
         <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => changeMode("EXIT")}
-            disabled={scanning || loading}
-            className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-4 text-sm font-bold transition sm:text-base ${
-              scanMode === "EXIT"
-                ? "bg-cyan-500 text-slate-950"
-                : "bg-slate-800 text-slate-200 hover:bg-slate-700"
-            }`}
-          >
-            <LogOut size={20} />
-            Verify EXIT
-          </button>
+          {[
+            {
+              value: "EXIT",
+              label: "Verify EXIT",
+              icon: LogOut,
+            },
+            {
+              value: "ENTRY",
+              label: "Verify ENTRY",
+              icon: LogIn,
+            },
+          ].map((mode) => {
+            const Icon = mode.icon;
 
-          <button
-            type="button"
-            onClick={() => changeMode("ENTRY")}
-            disabled={scanning || loading}
-            className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-4 text-sm font-bold transition sm:text-base ${
-              scanMode === "ENTRY"
-                ? "bg-cyan-500 text-slate-950"
-                : "bg-slate-800 text-slate-200 hover:bg-slate-700"
-            }`}
-          >
-            <LogIn size={20} />
-            Verify ENTRY
-          </button>
+            return (
+              <button
+                key={mode.value}
+                type="button"
+                onClick={() => changeMode(mode.value)}
+                disabled={scanning || loading}
+                className={`flex items-center justify-center gap-2 rounded-2xl px-3 py-4 text-sm font-bold transition disabled:opacity-50 sm:text-base ${
+                  scanMode === mode.value
+                    ? "bg-cyan-500 text-slate-950"
+                    : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                }`}
+              >
+                <Icon size={20} />
+                {mode.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* SCANNER */}
@@ -571,7 +696,7 @@ const SecurityDashboard = () => {
             <div className="py-7 text-center">
               <ScanLine size={58} className="mx-auto mb-4 text-slate-600" />
 
-              <p className="text-sm leading-6 text-slate-400">
+              <p className="text-sm text-slate-400">
                 Position the student's approved QR code in front of the camera.
               </p>
             </div>
@@ -620,8 +745,8 @@ const SecurityDashboard = () => {
             </div>
 
             <p className="text-sm leading-6 text-slate-300">
-              QR format has been read successfully. Its signature, approval,
-              expiry and permissions have not yet been verified.
+              QR format is recognized, but the server has not verified its
+              signature, validity or approvals.
             </p>
 
             <div className="mt-4 rounded-xl bg-slate-950 p-4">
@@ -633,9 +758,9 @@ const SecurityDashboard = () => {
             </div>
 
             <p className="mt-4 text-xs text-amber-200">
-              Confirming will record a gate movement if the backend accepts the
-              QR. Student identity preview requires a separate read-only
-              verification API.
+              Confirming will record a gate movement if backend validation
+              succeeds. Student identity and approval details will appear after
+              verification.
             </p>
 
             <button
@@ -677,34 +802,31 @@ const SecurityDashboard = () => {
           </div>
         )}
 
-        {/* VERIFIED OUTPASS DATA */}
+        {/* VERIFIED DATA */}
         {verifiedData && (
-          <section className="overflow-hidden rounded-[26px] border border-slate-800 bg-slate-900 shadow-xl">
-            <div className="border-b border-slate-800 bg-emerald-950/60 px-6 py-5">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <CheckCircle2 size={22} />
+          <div className="space-y-5">
+            <div className="rounded-[24px] border border-emerald-700/50 bg-gradient-to-r from-slate-900 to-emerald-950 p-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-300">
+                    <CheckCircle2 size={24} />
 
-                <h3 className="text-lg font-bold">Verified Student Outpass</h3>
+                    <h3 className="text-lg font-bold">
+                      Verified Student Outpass
+                    </h3>
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-400">
+                    Gate movement accepted by AMIOUT
+                  </p>
+                </div>
+
+                <StatusBadge value={verifiedData.status} />
               </div>
-
-              <p className="mt-2 text-xs text-slate-400">
-                Movement accepted by AMIOUT backend
-              </p>
             </div>
 
-            {!verifiedData.studentName || !verifiedData.enrollmentNumber ? (
-              <div className="mx-5 mt-5 flex items-start gap-3 rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-sm text-amber-200">
-                <AlertCircle size={19} className="shrink-0" />
-
-                <p>
-                  Movement was recorded, but the API did not provide complete
-                  student identity details. Backend response needs to be
-                  checked.
-                </p>
-              </div>
-            ) : null}
-
-            <div className="grid gap-3 p-5 sm:grid-cols-2">
+            {/* STUDENT INFORMATION */}
+            <InfoSection title="Student Information" icon={UserRound}>
               <DetailItem
                 icon={UserRound}
                 label="Student Name"
@@ -718,50 +840,184 @@ const SecurityDashboard = () => {
               />
 
               <DetailItem
+                icon={Building2}
+                label="Course / Program"
+                value={verifiedData.course}
+              />
+
+              <DetailItem
+                icon={Users}
+                label="Semester / Section / Group"
+                value={[
+                  verifiedData.semester && `Semester ${verifiedData.semester}`,
+                  verifiedData.section && `Section ${verifiedData.section}`,
+                  verifiedData.group && `Group ${verifiedData.group}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            </InfoSection>
+
+            {/* OUTPASS DETAILS */}
+            <InfoSection title="Outpass Details" icon={FileText}>
+              <DetailItem
                 icon={FileText}
                 label="Outpass Number"
                 value={verifiedData.outpassId}
               />
 
               <DetailItem
-                icon={ShieldCheck}
-                label="Movement Status"
-                value={verifiedData.status}
+                icon={MapPin}
+                label="Destination"
+                value={verifiedData.destination}
               />
 
-              {verifiedData.destination && (
-                <DetailItem
-                  icon={MapPin}
-                  label="Destination"
-                  value={verifiedData.destination}
-                />
-              )}
+              <DetailItem
+                icon={FileText}
+                label="Reason"
+                value={verifiedData.reason}
+              />
 
-              {verifiedData.outDate && (
-                <DetailItem
-                  icon={CalendarDays}
-                  label="Out Date"
-                  value={formatDate(verifiedData.outDate)}
-                />
-              )}
+              <DetailItem
+                icon={CalendarDays}
+                label="Out Date"
+                value={formatDate(verifiedData.outDate)}
+              />
 
-              {verifiedData.outTime && (
-                <DetailItem
-                  icon={Clock3}
-                  label="Out Time"
-                  value={verifiedData.outTime}
-                />
-              )}
+              <DetailItem
+                icon={Clock3}
+                label="Out Time"
+                value={verifiedData.outTime}
+              />
 
-              {verifiedData.parentStatus && (
-                <DetailItem
-                  icon={ShieldCheck}
-                  label="Parent Consent"
-                  value={verifiedData.parentStatus}
-                />
+              <DetailItem
+                icon={Clock3}
+                label="Expected In Time"
+                value={verifiedData.inTime || "No planned return"}
+              />
+            </InfoSection>
+
+            {/* PARENT APPROVAL */}
+            <InfoSection title="Parent Approval" icon={Phone}>
+              <DetailItem
+                icon={UserRound}
+                label="Parent Name"
+                value={verifiedData.parentName}
+              />
+
+              <DetailItem
+                icon={Phone}
+                label="Registered Mobile (Masked)"
+                value={verifiedData.parentMobile}
+              />
+
+              <DetailItem
+                icon={BadgeCheck}
+                label="Parent Consent Status"
+                value={verifiedData.parentStatus}
+              />
+
+              <DetailItem
+                icon={ShieldCheck}
+                label="Approval Method"
+                value={formatConsentMethod(verifiedData.parentMethod)}
+              />
+
+              <DetailItem
+                icon={CalendarDays}
+                label="Parent Decision Time"
+                value={formatDate(verifiedData.parentDecidedAt, true)}
+              />
+
+              {verifiedData.parentMethod === "PHONE_CALL" && (
+                <>
+                  <DetailItem
+                    icon={UserCheck}
+                    label="Phone Consent Verified By"
+                    value={verifiedData.parentVerifiedBy}
+                  />
+
+                  <DetailItem
+                    icon={Users}
+                    label="Verifier Role"
+                    value={verifiedData.parentVerifiedByRole}
+                  />
+
+                  <DetailItem
+                    icon={Clock3}
+                    label="Phone Verified At"
+                    value={formatDate(verifiedData.parentCallVerifiedAt, true)}
+                  />
+                </>
               )}
-            </div>
-          </section>
+            </InfoSection>
+
+            {/* UNIVERSITY APPROVAL */}
+            <InfoSection title="University Approval" icon={ShieldCheck}>
+              <DetailItem
+                icon={BadgeCheck}
+                label="Approval Status"
+                value={verifiedData.universityStatus}
+              />
+
+              <DetailItem
+                icon={UserCheck}
+                label="Approved By"
+                value={verifiedData.universityApprovedBy}
+              />
+
+              <DetailItem
+                icon={Users}
+                label="Authority Role"
+                value={verifiedData.universityRole}
+              />
+
+              <DetailItem
+                icon={CalendarDays}
+                label="University Approval Time"
+                value={formatDate(verifiedData.universityApprovedAt, true)}
+              />
+            </InfoSection>
+
+            {/* SECURITY */}
+            <InfoSection title="Security Gate Verification" icon={ScanLine}>
+              <DetailItem
+                icon={LogOut}
+                label="EXIT Verification"
+                value={verifiedData.exitVerified ? "VERIFIED" : "NOT VERIFIED"}
+              />
+
+              <DetailItem
+                icon={Clock3}
+                label="EXIT Verified At"
+                value={formatDate(verifiedData.exitVerifiedAt, true)}
+              />
+
+              <DetailItem
+                icon={LogIn}
+                label="ENTRY Verification"
+                value={verifiedData.entryVerified ? "VERIFIED" : "NOT VERIFIED"}
+              />
+
+              <DetailItem
+                icon={Clock3}
+                label="ENTRY Verified At"
+                value={formatDate(verifiedData.entryVerifiedAt, true)}
+              />
+
+              <DetailItem
+                icon={CalendarDays}
+                label="QR Valid From"
+                value={formatDate(verifiedData.qrValidFrom, true)}
+              />
+
+              <DetailItem
+                icon={CalendarDays}
+                label="QR Expires At"
+                value={formatDate(verifiedData.qrExpiresAt, true)}
+              />
+            </InfoSection>
+          </div>
         )}
       </main>
     </div>
