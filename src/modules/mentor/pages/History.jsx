@@ -1,994 +1,710 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
-  Search,
-  CheckCircle2,
-  XCircle,
-  RotateCcw,
-  Clock3,
-  RefreshCw,
-  History as HistoryIcon,
+  AlertCircle,
+  ArrowRight,
   CalendarDays,
-  MapPin,
-  FileText,
-  ShieldCheck,
-  Users,
-  Filter,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  ArrowUpRight,
-  Inbox,
-  AlertCircle,
-  LogOut,
   ClipboardList,
+  Clock3,
+  FileText,
+  Filter,
+  History as HistoryIcon,
+  Inbox,
   Loader2,
+  LogOut,
+  MapPin,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  UserRound,
   X,
+  XCircle,
 } from "lucide-react";
-
+import api from "../../../services/api";
 import { getHistory } from "../services/mentor.service";
 
-// ============================================================
-// CONFIGURATION
-// ============================================================
-
 const PAGE_SIZE = 20;
+const STATUS_OPTIONS = ["ALL", "APPROVED", "REJECTED", "RETURNED", "EXITED"];
 
-const STATUS_OPTIONS = [
-  { value: "ALL", label: "All Statuses" },
-  { value: "APPROVED", label: "Approved" },
-  { value: "REJECTED", label: "Rejected" },
-  { value: "RETURNED", label: "Returned" },
-  { value: "EXITED", label: "Exited" },
-  { value: "PENDING", label: "Pending" },
-];
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-const unwrapHistory = (response) => {
-  const payload = response?.data ?? response;
-
-  if (Array.isArray(payload)) {
-    return { items: payload, total: null };
-  }
-
-  if (Array.isArray(payload?.data)) {
-    return {
-      items: payload.data,
-      total: payload.total ?? payload.pagination?.total ?? null,
-    };
-  }
-
-  if (Array.isArray(payload?.data?.data)) {
-    return {
-      items: payload.data.data,
-      total: payload.data.total ?? payload.data.pagination?.total ?? null,
-    };
-  }
-
-  if (Array.isArray(payload?.history)) {
-    return {
-      items: payload.history,
-      total: payload.total ?? null,
-    };
-  }
-
-  if (Array.isArray(payload?.data?.history)) {
-    return {
-      items: payload.data.history,
-      total: payload.data.total ?? null,
-    };
-  }
-
-  return { items: [], total: null };
-};
-
-const getStudentName = (item) =>
+const normalize = (value) =>
+  String(value ?? "")
+    .trim()
+    .toUpperCase();
+const studentName = (item) =>
   item?.studentName ||
   item?.student?.name ||
   item?.student?.fullName ||
   "Unknown Student";
-
-const getEnrollment = (item) =>
-  item?.enrollmentNumber || item?.student?.enrollmentNumber || "";
-
-const getInitials = (name) => {
-  const words = String(name || "")
+const enrollment = (item) =>
+  item?.enrollmentNumber || item?.student?.enrollmentNumber || "—";
+const initials = (name) =>
+  String(name || "ST")
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-
-  if (!words.length) return "ST";
-
-  return words
+    .filter(Boolean)
     .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
+    .map((part) => part.charAt(0).toUpperCase())
     .join("");
+
+const dateTime = (value) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 };
 
-const formatDateTime = (value) => {
-  if (!value) return { date: "—", time: "" };
+const outpassDate = (value) => {
+  if (!value) return "—";
+  const raw = String(value);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T00:00:00+05:30`)
+    : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+};
 
-  const date = new Date(value);
+const getError = (error) =>
+  error?.response?.data?.message ||
+  error?.message ||
+  "Failed to load outpass history.";
 
-  if (Number.isNaN(date.getTime())) {
-    return { date: "—", time: "" };
+const unwrapHistory = (response) => {
+  // Axios requests return {data: payload}, mentor.service returns payload.
+  const payload =
+    response?.data?.success !== undefined
+      ? response.data
+      : response?.success !== undefined
+        ? response
+        : (response?.data ?? response);
+
+  if (payload?.success === false) {
+    throw new Error(payload.message || "Unable to fetch outpass history.");
   }
 
-  return {
-    date: new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(date),
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.data?.data)
+        ? payload.data.data
+        : Array.isArray(payload?.data?.history)
+          ? payload.data.history
+          : Array.isArray(payload?.history)
+            ? payload.history
+            : null;
 
-    time: new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date),
-  };
+  if (!items) {
+    throw new Error("Unexpected history response from the server.");
+  }
+
+  const totalValue =
+    payload?.pagination?.total ??
+    payload?.data?.pagination?.total ??
+    payload?.total ??
+    payload?.data?.total;
+  const total =
+    Number.isFinite(Number(totalValue)) && totalValue != null
+      ? Number(totalValue)
+      : null;
+  return { items, total };
 };
 
-const getStatusInfo = (value) => {
-  const status = String(value || "PENDING").toUpperCase();
-
-  const configs = {
-    APPROVED: {
-      label: "Approved",
-      icon: CheckCircle2,
-      className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    },
-    REJECTED: {
-      label: "Rejected",
-      icon: XCircle,
-      className: "bg-red-50 text-red-700 border-red-200",
-    },
-    RETURNED: {
-      label: "Returned",
-      icon: RotateCcw,
-      className: "bg-blue-50 text-blue-700 border-blue-200",
-    },
-    EXITED: {
-      label: "Exited",
-      icon: LogOut,
-      className: "bg-violet-50 text-violet-700 border-violet-200",
-    },
-    PENDING: {
-      label: "Pending",
-      icon: Clock3,
-      className: "bg-amber-50 text-amber-700 border-amber-200",
-    },
-  };
-
-  return (
-    configs[status] || {
-      label: status.replaceAll("_", " "),
-      icon: Clock3,
-      className: "bg-slate-100 text-slate-700 border-slate-200",
-    }
-  );
+const statusConfig = {
+  APPROVED: {
+    icon: CheckCircle2,
+    label: "Approved",
+    style: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  REJECTED: {
+    icon: XCircle,
+    label: "Rejected",
+    style: "bg-red-50 text-red-700 border-red-200",
+  },
+  RETURNED: {
+    icon: RotateCcw,
+    label: "Returned",
+    style: "bg-blue-50 text-blue-700 border-blue-200",
+  },
+  EXITED: {
+    icon: LogOut,
+    label: "Exited",
+    style: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  PENDING: {
+    icon: Clock3,
+    label: "Pending",
+    style: "bg-amber-50 text-amber-700 border-amber-200",
+  },
 };
-
-// ============================================================
-// STATUS BADGE
-// ============================================================
 
 const StatusBadge = ({ status }) => {
-  const config = getStatusInfo(status);
+  const key = normalize(status);
+  const config = statusConfig[key] || {
+    icon: Clock3,
+    label: key.replaceAll("_", " ") || "Unknown",
+    style: "bg-slate-100 text-slate-700 border-slate-200",
+  };
   const Icon = config.icon;
-
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold ${config.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${config.style}`}
     >
-      <Icon size={14} />
-      {config.label}
+      <Icon size={13} /> {config.label}
     </span>
   );
 };
 
-// ============================================================
-// STAT CARD
-// ============================================================
-
-const StatCard = ({ title, value, icon: Icon, tone }) => {
-  const tones = {
-    blue: "bg-blue-50 text-blue-600",
-    green: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
-    amber: "bg-amber-50 text-amber-600",
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition hover:shadow-md">
-      <div className="flex items-center justify-between">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-            tones[tone] || tones.blue
-          }`}
-        >
-          <Icon size={22} />
-        </div>
-
-        <ArrowUpRight size={17} className="text-slate-300" />
-      </div>
-
-      <h3 className="mt-5 text-3xl font-extrabold tracking-tight text-slate-900">
-        {value}
-      </h3>
-
-      <p className="mt-1 text-sm font-medium text-slate-500">{title}</p>
+const SummaryCard = ({ title, value, icon: Icon, color }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className={`inline-flex rounded-xl p-3 ${color}`}>
+      <Icon size={21} />
     </div>
-  );
-};
+    <div className="mt-4 text-3xl font-extrabold text-slate-900">{value}</div>
+    <div className="mt-1 text-sm text-slate-500">{title}</div>
+  </div>
+);
 
-// ============================================================
-// HISTORY PAGE
-// ============================================================
+const Info = ({ label, value }) => (
+  <div className="min-w-0 rounded-xl bg-slate-50 p-3">
+    <p className="text-xs font-medium text-slate-500">{label}</p>
+    <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+      {value ?? "—"}
+    </p>
+  </div>
+);
 
 const History = () => {
+  const { pathname } = useLocation();
+  const isCoordinator =
+    pathname === "/coordinator" || pathname.startsWith("/coordinator/");
+  const basePath = isCoordinator ? "/coordinator" : "/mentor";
+
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(null);
-
-  const [error, setError] = useState("");
-
   const [selectedItem, setSelectedItem] = useState(null);
-
-  // ------------------------------------------------------------
-  // DEBOUNCE SEARCH
-  // ------------------------------------------------------------
+  const requestRef = useRef(0);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
+    const timer = setTimeout(() => {
       setDebouncedSearch(search.trim());
       setPage(1);
     }, 350);
-
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(timer);
   }, [search]);
-
-  // ------------------------------------------------------------
-  // FETCH HISTORY
-  // ------------------------------------------------------------
 
   const loadHistory = useCallback(
     async (silent = false) => {
+      const currentRequest = ++requestRef.current;
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      setError("");
       try {
-        if (silent) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        setError("");
-
-        const response = await getHistory(page, PAGE_SIZE, debouncedSearch);
-
+        const response = isCoordinator
+          ? await api.get("/coordinator/history", {
+              params: { page, limit: PAGE_SIZE, search: debouncedSearch },
+            })
+          : await getHistory(page, PAGE_SIZE, debouncedSearch);
+        if (currentRequest !== requestRef.current) return;
         const result = unwrapHistory(response);
-
         setHistory(result.items);
         setTotal(result.total);
+        setSelectedItem(null);
       } catch (err) {
-        console.error("History API Error:", err);
-
-        const message =
-          err?.response?.data?.message || "Failed to load outpass history.";
-
+        if (currentRequest !== requestRef.current) return;
+        const message = getError(err);
         setError(message);
+        setHistory([]);
+        setTotal(null);
         toast.error(message);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (currentRequest === requestRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [page, debouncedSearch],
+    [isCoordinator, page, debouncedSearch],
   );
 
   useEffect(() => {
-    loadHistory();
+    void loadHistory();
+    return () => {
+      requestRef.current += 1;
+    };
   }, [loadHistory]);
 
-  // ------------------------------------------------------------
-  // FILTER LOADED DATA
-  // ------------------------------------------------------------
-
-  const filteredHistory = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    return history.filter((item) => {
-      const status = String(item.status || "").toUpperCase();
-
-      const matchesStatus = statusFilter === "ALL" || status === statusFilter;
-
-      const searchText = [
-        item.outpassId,
-        getStudentName(item),
-        getEnrollment(item),
-        item.destination,
-        item.reason,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !keyword || searchText.includes(keyword);
-
-      return matchesStatus && matchesSearch;
-    });
-  }, [history, statusFilter, search]);
-
-  // ------------------------------------------------------------
-  // SUMMARY (LOADED PAGE)
-  // ------------------------------------------------------------
-
-  const stats = useMemo(() => {
-    const statuses = history.map((item) =>
-      String(item.status || "").toUpperCase(),
-    );
-
-    return {
-      total: history.length,
-      approved: statuses.filter((value) => value === "APPROVED").length,
-      rejected: statuses.filter((value) => value === "REJECTED").length,
-      other: statuses.filter(
-        (value) => value !== "APPROVED" && value !== "REJECTED",
-      ).length,
+  useEffect(() => {
+    if (!selectedItem) return undefined;
+    const onEscape = (event) => {
+      if (event.key === "Escape") setSelectedItem(null);
     };
-  }, [history]);
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [selectedItem]);
 
-  const hasNextPage =
-    total !== null ? page * PAGE_SIZE < total : history.length === PAGE_SIZE;
+  const filteredHistory = useMemo(
+    () =>
+      history.filter(
+        (item) =>
+          statusFilter === "ALL" || normalize(item.status) === statusFilter,
+      ),
+    [history, statusFilter],
+  );
 
-  // ------------------------------------------------------------
-  // UI
-  // ------------------------------------------------------------
+  const stats = useMemo(
+    () => ({
+      total: history.length,
+      approved: history.filter((item) => normalize(item.status) === "APPROVED")
+        .length,
+      rejected: history.filter((item) => normalize(item.status) === "REJECTED")
+        .length,
+      other: history.filter(
+        (item) => !["APPROVED", "REJECTED"].includes(normalize(item.status)),
+      ).length,
+    }),
+    [history],
+  );
+
+  const hasNext =
+    total == null ? history.length === PAGE_SIZE : page * PAGE_SIZE < total;
+
+  const resetFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setStatusFilter("ALL");
+    setPage(1);
+  };
 
   return (
-    <div className="min-h-screen space-y-7 pb-10">
-      {/* =====================================================
-          PREMIUM HEADER
-      ===================================================== */}
-
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-blue-950 to-indigo-900 p-6 text-white shadow-xl sm:p-8">
-        <div className="pointer-events-none absolute -right-14 -top-20 h-60 w-60 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-24 h-40 w-40 rounded-full bg-indigo-400/10 blur-3xl" />
-
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen space-y-6 pb-10">
+      <section className="rounded-3xl bg-gradient-to-r from-slate-950 via-blue-950 to-indigo-900 p-6 text-white shadow-xl sm:p-8">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-100">
-              <ShieldCheck size={15} />
-              AMIOUT Faculty Portal
-            </div>
-
-            <h1 className="flex items-center gap-3 text-2xl font-extrabold tracking-tight sm:text-4xl">
-              <HistoryIcon
-                className="hidden text-cyan-300 sm:block"
-                size={32}
-              />
-              Outpass History
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-blue-100">
+              <ShieldCheck size={14} />{" "}
+              {isCoordinator
+                ? "Coordinator · Section History"
+                : "Mentor · Group History"}
+            </span>
+            <h1 className="mt-4 flex items-center gap-3 text-2xl font-extrabold sm:text-3xl">
+              <HistoryIcon size={27} /> Outpass History
             </h1>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-              Explore and review previous student outpass requests, approval
-              decisions and movement history.
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+              {isCoordinator
+                ? "Monitor previous outpasses for students in your authorized section."
+                : "Review previous outpasses of your assigned students."}
             </p>
           </div>
-
           <button
             type="button"
-            onClick={() => loadHistory(true)}
+            onClick={() => void loadHistory(true)}
             disabled={loading || refreshing}
-            className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold hover:bg-white/20 disabled:opacity-50"
           >
-            <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+            <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
             {refreshing ? "Refreshing..." : "Refresh History"}
           </button>
         </div>
       </section>
 
-      {/* =====================================================
-          SUMMARY CARDS
-      ===================================================== */}
-
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <SummaryCard
           title="Loaded Records"
           value={stats.total}
           icon={ClipboardList}
-          tone="blue"
+          color="bg-blue-50 text-blue-600"
         />
-
-        <StatCard
+        <SummaryCard
           title="Approved"
           value={stats.approved}
           icon={CheckCircle2}
-          tone="green"
+          color="bg-emerald-50 text-emerald-600"
         />
-
-        <StatCard
+        <SummaryCard
           title="Rejected"
           value={stats.rejected}
           icon={XCircle}
-          tone="red"
+          color="bg-red-50 text-red-600"
         />
-
-        <StatCard
+        <SummaryCard
           title="Other Statuses"
           value={stats.other}
           icon={Clock3}
-          tone="amber"
+          color="bg-amber-50 text-amber-600"
         />
-      </div>
+      </section>
 
-      {/* =====================================================
-          HISTORY CONTENT
-      ===================================================== */}
-
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_14px_40px_-22px_rgba(15,23,42,0.22)]">
-        {/* TOOLBAR */}
-
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-                <HistoryIcon size={21} className="text-blue-600" />
-                History Records
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Search and filter previously recorded outpasses
-              </p>
-            </div>
-
-            <span className="hidden rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 sm:inline-flex">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+              <HistoryIcon size={20} className="text-blue-600" /> History
+              Records
+            </h2>
+            <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
               Page {page}
+              {total != null ? ` · ${total} total` : ""}
             </span>
           </div>
-
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-            {/* SEARCH */}
-
-            <div className="relative">
+          <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <label className="relative">
               <Search
-                size={18}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
-
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search student, enrollment, destination..."
-                aria-label="Search outpass history"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                placeholder="Search student, enrollment, outpass ID..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-500"
               />
-            </div>
-
-            {/* STATUS FILTER */}
-
-            <div className="relative">
+            </label>
+            <label className="relative">
               <Filter
-                size={17}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
               />
-
               <select
+                aria-label="Filter by status"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
-                aria-label="Filter history status"
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-8 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500"
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-500"
               >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status === "ALL"
+                      ? "All Statuses"
+                      : status.charAt(0) + status.slice(1).toLowerCase()}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
           </div>
-
-          {/* FILTER SUMMARY */}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">
-              Showing{" "}
-              <span className="font-bold text-slate-800">
-                {filteredHistory.length}
-              </span>{" "}
-              records from the current page
-            </p>
-
+          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
+            <span>Showing {filteredHistory.length} records from this page</span>
             {(search || statusFilter !== "ALL") && (
               <button
                 type="button"
-                onClick={() => {
-                  setSearch("");
-                  setDebouncedSearch("");
-                  setStatusFilter("ALL");
-                  setPage(1);
-                }}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                onClick={resetFilters}
+                className="flex items-center gap-1 font-bold text-blue-600"
               >
-                <X size={14} />
-                Clear Filters
+                <X size={14} /> Clear Filters
               </button>
             )}
           </div>
         </div>
 
-        {/* ERROR */}
-
         {error && (
-          <div className="m-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-red-700">
-              <AlertCircle size={18} />
-              {error}
-            </div>
-
+          <div
+            role="alert"
+            className="m-5 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            <AlertCircle size={18} /> <span className="flex-1">{error}</span>
             <button
               type="button"
-              onClick={() => loadHistory()}
-              className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700"
+              onClick={() => void loadHistory()}
+              className="font-bold underline"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* LOADING */}
-
         {loading ? (
-          <div className="space-y-4 p-6">
-            {[1, 2, 3, 4].map((number) => (
-              <div
-                key={number}
-                className="flex animate-pulse items-center gap-4 rounded-2xl bg-slate-50 p-5"
-              >
-                <div className="h-12 w-12 shrink-0 rounded-xl bg-slate-200" />
-
-                <div className="flex-1 space-y-3">
-                  <div className="h-3 w-1/3 rounded bg-slate-200" />
-                  <div className="h-3 w-2/3 rounded bg-slate-200" />
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center gap-3 p-20 text-slate-500">
+            <Loader2 size={29} className="animate-spin text-blue-600" /> Loading
+            outpass history...
           </div>
-        ) : filteredHistory.length === 0 ? (
-          /* EMPTY STATE */
-
+        ) : !error && filteredHistory.length === 0 ? (
           <div className="flex flex-col items-center px-6 py-20 text-center">
-            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
-              <Inbox size={36} strokeWidth={1.5} />
-            </div>
-
-            <h3 className="text-xl font-extrabold text-slate-900">
+            <Inbox size={43} className="text-slate-400" />
+            <h3 className="mt-4 text-lg font-extrabold text-slate-900">
               No History Found
             </h3>
-
-            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              {search || statusFilter !== "ALL"
-                ? "No records on this page match your current filters."
-                : "No outpass history records are available for this page."}
+            <p className="mt-2 text-sm text-slate-500">
+              {statusFilter !== "ALL" || search
+                ? "No records match your current filters."
+                : "No outpass history records are available."}
             </p>
-
-            {(search || statusFilter !== "ALL") && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setDebouncedSearch("");
-                  setStatusFilter("ALL");
-                }}
-                className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                Reset Filters
-              </button>
-            )}
           </div>
-        ) : (
+        ) : !error ? (
           <>
-            {/* =====================================================
-                DESKTOP TABLE
-            ===================================================== */}
-
             <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-full text-left">
-                <thead className="border-b border-slate-200 bg-slate-50/90">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
                   <tr>
                     {[
-                      "OUTPASS ID",
-                      "STUDENT",
-                      "DESTINATION",
-                      "REASON",
-                      "STATUS",
-                      "DATE",
-                      "DETAILS",
-                    ].map((heading) => (
-                      <th
-                        key={heading}
-                        className="whitespace-nowrap px-5 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500"
-                      >
-                        {heading}
+                      "Outpass ID",
+                      "Student",
+                      "Destination",
+                      "Reason",
+                      "Status",
+                      "Applied On",
+                      "Details",
+                    ].map((label) => (
+                      <th key={label} className="whitespace-nowrap px-5 py-4">
+                        {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-
                 <tbody className="divide-y divide-slate-100">
-                  {filteredHistory.map((item) => {
-                    const studentName = getStudentName(item);
-                    const date = formatDateTime(item.createdAt);
-
-                    return (
-                      <tr
-                        key={item._id}
-                        className="transition hover:bg-blue-50/40"
+                  {filteredHistory.map((item) => (
+                    <tr key={item._id} className="hover:bg-blue-50/40">
+                      <td className="px-5 py-4 font-mono text-xs font-bold text-slate-700">
+                        {item.outpassId || item._id}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex min-w-44 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xs font-bold text-white">
+                            {initials(studentName(item))}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              {studentName(item)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {enrollment(item)}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="max-w-44 truncate px-5 py-4 text-sm text-slate-700">
+                        {item.destination || "—"}
+                      </td>
+                      <td
+                        className="max-w-48 truncate px-5 py-4 text-sm text-slate-600"
+                        title={item.reason}
                       >
-                        {/* ID */}
-
-                        <td className="px-5 py-5">
-                          <span className="inline-flex max-w-[165px] truncate rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs font-semibold text-slate-700">
-                            {item.outpassId || item._id || "—"}
-                          </span>
-                        </td>
-
-                        {/* STUDENT */}
-
-                        <td className="px-5 py-5">
-                          <div className="flex min-w-[170px] items-center gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white">
-                              {getInitials(studentName)}
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="max-w-[175px] truncate text-sm font-bold text-slate-900">
-                                {studentName}
-                              </p>
-
-                              <p className="mt-1 text-xs text-slate-400">
-                                {getEnrollment(item) || "Student"}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* DESTINATION */}
-
-                        <td className="px-5 py-5">
-                          <div className="flex max-w-[160px] items-center gap-2">
-                            <MapPin
-                              size={15}
-                              className="shrink-0 text-blue-500"
-                            />
-
-                            <span className="truncate text-sm font-medium text-slate-700">
-                              {item.destination || "—"}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* REASON */}
-
-                        <td className="px-5 py-5">
-                          <p
-                            title={item.reason || ""}
-                            className="max-w-[190px] truncate text-sm text-slate-600"
-                          >
-                            {item.reason || "—"}
-                          </p>
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td className="px-5 py-5">
-                          <StatusBadge status={item.status} />
-                        </td>
-
-                        {/* DATE */}
-
-                        <td className="whitespace-nowrap px-5 py-5">
-                          <div className="flex items-start gap-2">
-                            <CalendarDays
-                              size={16}
-                              className="mt-0.5 text-slate-400"
-                            />
-
-                            <div>
-                              <p className="text-sm font-semibold text-slate-700">
-                                {date.date}
-                              </p>
-
-                              <p className="mt-1 text-xs text-slate-400">
-                                {date.time}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* DETAILS */}
-
-                        <td className="px-5 py-5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedItem(item)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
-                          >
-                            <FileText size={15} />
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        {item.reason || "—"}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={item.status} />
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-xs text-slate-600">
+                        {dateTime(item.createdAt)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItem(item)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                        >
+                          <FileText size={15} /> View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-
-            {/* =====================================================
-                MOBILE / TABLET CARDS
-            ===================================================== */}
-
             <div className="grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
-              {filteredHistory.map((item) => {
-                const studentName = getStudentName(item);
-                const date = formatDateTime(item.createdAt);
-
-                return (
-                  <article
-                    key={item._id}
-                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-                  >
-                    <div className="border-b border-slate-100 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                            Outpass ID
-                          </p>
-
-                          <h3 className="mt-1 break-all font-mono text-xs font-bold text-slate-800">
-                            {item.outpassId || item._id || "—"}
-                          </h3>
-                        </div>
-
-                        <StatusBadge status={item.status} />
-                      </div>
+              {filteredHistory.map((item) => (
+                <article
+                  key={item._id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
+                    <div>
+                      <p className="text-xs text-slate-400">Outpass ID</p>
+                      <p className="mt-1 break-all font-mono text-xs font-bold text-slate-800">
+                        {item.outpassId || item._id}
+                      </p>
                     </div>
-
-                    <div className="space-y-4 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 font-bold text-white">
-                          {getInitials(studentName)}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-900">
-                            {studentName}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-500">
-                            {getEnrollment(item) || "Student"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                          <MapPin size={14} />
-                          Destination
-                        </p>
-
-                        <p className="break-words text-sm font-medium text-slate-800">
-                          {item.destination || "—"}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                          <FileText size={14} />
-                          Reason
-                        </p>
-
-                        <p className="line-clamp-3 break-words text-sm leading-6 text-slate-600">
-                          {item.reason || "—"}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <CalendarDays size={15} />
-                        {date.date}
-                        {date.time && <span>· {date.time}</span>}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-100 bg-slate-50/70 p-3">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedItem(item)}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-blue-700"
-                      >
-                        <FileText size={16} />
-                        View Details
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <div className="space-y-3 p-4 text-sm">
+                    <p className="flex items-center gap-2 font-bold text-slate-900">
+                      <UserRound size={15} />
+                      {studentName(item)}
+                    </p>
+                    <p className="text-xs text-slate-500">{enrollment(item)}</p>
+                    <p className="flex gap-2 text-slate-700">
+                      <MapPin size={16} className="shrink-0 text-blue-600" />
+                      {item.destination || "—"}
+                    </p>
+                    <p className="line-clamp-2 text-slate-600">
+                      {item.reason || "—"}
+                    </p>
+                    <p className="flex items-center gap-2 text-xs text-slate-500">
+                      <CalendarDays size={15} />
+                      {dateTime(item.createdAt)}
+                    </p>
+                  </div>
+                  <div className="border-t border-slate-100 bg-slate-50 p-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedItem(item)}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-bold text-white hover:bg-blue-700"
+                    >
+                      <FileText size={15} /> View Details
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
           </>
-        )}
+        ) : null}
 
-        {/* =====================================================
-            PAGINATION
-        ===================================================== */}
-
-        {!loading && (page > 1 || hasNextPage) && (
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/70 px-5 py-4">
-            <p className="text-xs font-medium text-slate-500">
+        {!loading && !error && (page > 1 || hasNext) && (
+          <div className="flex items-center justify-between gap-4 border-t border-slate-100 bg-slate-50 p-4">
+            <p className="text-xs text-slate-500">
               Page {page}
-              {typeof total === "number" ? ` · ${total} total records` : ""}
+              {total != null
+                ? ` of ${Math.max(1, Math.ceil(total / PAGE_SIZE))}`
+                : ""}
             </p>
-
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 disabled={page === 1}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold disabled:opacity-40"
               >
-                <ChevronLeft size={16} />
-                Previous
+                <ChevronLeft size={15} /> Previous
               </button>
-
               <button
                 type="button"
                 onClick={() => setPage((current) => current + 1)}
-                disabled={!hasNextPage}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!hasNext}
+                className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
               >
-                Next
-                <ChevronRight size={16} />
+                Next <ChevronRight size={15} />
               </button>
             </div>
           </div>
         )}
       </section>
 
-      {/* =====================================================
-          DETAILS MODAL
-      ===================================================== */}
-
       {selectedItem && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedItem(null);
-            }
+            if (event.target === event.currentTarget) setSelectedItem(null);
           }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
         >
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="history-details-title"
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white shadow-2xl"
+            aria-labelledby="history-dialog-title"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
+            <div className="flex items-center justify-between border-b border-slate-100 p-5">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                  Outpass Record
+                <p className="text-xs font-bold text-blue-600">
+                  AMIOUT · READ ONLY
                 </p>
-
                 <h2
-                  id="history-details-title"
-                  className="mt-1 text-xl font-bold text-slate-900"
+                  id="history-dialog-title"
+                  className="mt-1 text-xl font-extrabold text-slate-900"
                 >
-                  Request Details
+                  Outpass Details
                 </h2>
               </div>
-
               <button
                 type="button"
+                aria-label="Close"
                 onClick={() => setSelectedItem(null)}
-                aria-label="Close details"
                 className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"
               >
                 <X size={20} />
               </button>
             </div>
-
-            <div className="space-y-5 p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-xs font-bold text-slate-700">
-                  {selectedItem.outpassId || selectedItem._id || "—"}
+            <div className="space-y-4 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="rounded-xl bg-slate-100 px-3 py-2 font-mono text-xs font-bold text-slate-700">
+                  {selectedItem.outpassId || selectedItem._id}
                 </span>
-
                 <StatusBadge status={selectedItem.status} />
               </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">
-                    Student
-                  </p>
-
-                  <p className="mt-1 break-words text-sm font-bold text-slate-900">
-                    {getStudentName(selectedItem)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">
-                    Enrollment
-                  </p>
-
-                  <p className="mt-1 break-words text-sm font-bold text-slate-900">
-                    {getEnrollment(selectedItem) || "—"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">
-                    Destination
-                  </p>
-
-                  <p className="mt-1 break-words text-sm font-medium text-slate-800">
-                    {selectedItem.destination || "—"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">
-                    Applied On
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-slate-800">
-                    {formatDateTime(selectedItem.createdAt).date}
-                  </p>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Info label="Student" value={studentName(selectedItem)} />
+                <Info label="Enrollment" value={enrollment(selectedItem)} />
+                <Info
+                  label="Destination"
+                  value={selectedItem.destination || "—"}
+                />
+                <Info
+                  label="Outpass Date"
+                  value={outpassDate(selectedItem.outDate)}
+                />
+                <Info
+                  label="Created At"
+                  value={dateTime(selectedItem.createdAt)}
+                />
+                <Info
+                  label="Assigned Authority"
+                  value={
+                    selectedItem.approvedAuthorityRole ||
+                    selectedItem.assignedRole ||
+                    "—"
+                  }
+                />
+                <Info
+                  label="Parent Status"
+                  value={selectedItem.parentDecision?.status || "—"}
+                />
+                <Info
+                  label="Faculty Approved At"
+                  value={dateTime(selectedItem.approvedAt)}
+                />
+                <Info
+                  label="Exit Verified"
+                  value={dateTime(selectedItem.exitVerifiedAt)}
+                />
+                <Info
+                  label="Entry Verified"
+                  value={dateTime(selectedItem.entryVerifiedAt)}
+                />
               </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="mb-2 text-xs font-semibold text-slate-400">
-                  Reason
-                </p>
-
-                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
+              <div className="rounded-xl bg-blue-50 p-4">
+                <p className="text-xs font-bold text-blue-700">Reason</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-700">
                   {selectedItem.reason || "—"}
                 </p>
               </div>
-
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
-                <p className="flex items-center gap-2 text-xs font-semibold text-blue-700">
-                  <ShieldCheck size={16} />
-                  AMIOUT History
-                </p>
-
-                <p className="mt-2 text-xs leading-5 text-blue-800/80">
-                  This is a read-only record from the existing faculty history
-                  response.
-                </p>
-              </div>
             </div>
-
-            <div className="border-t border-slate-100 p-4">
+            <div className="flex flex-wrap gap-3 border-t border-slate-100 p-5">
+              <Link
+                to={`${basePath}/outpass/${selectedItem._id}`}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                Full Details <ArrowRight size={16} />
+              </Link>
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}
-                className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
               >
-                Close Details
+                Close
               </button>
             </div>
           </div>

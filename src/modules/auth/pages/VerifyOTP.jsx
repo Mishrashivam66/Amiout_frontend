@@ -15,10 +15,6 @@ const VerifyOTP = () => {
 
   const purpose = location.state?.purpose;
 
-  console.log("LOCATION:", location);
-  console.log("EMAIL:", email);
-  console.log("PURPOSE:", purpose);
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950">
       {/* ====================================== */}

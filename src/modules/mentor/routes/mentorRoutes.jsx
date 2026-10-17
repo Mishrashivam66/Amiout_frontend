@@ -5,6 +5,7 @@ import ProtectedRoute from "../../../routes/ProtectedRoute";
 
 import MentorLayout from "../components/layout/MentorLayout";
 
+// Shared pages
 import Dashboard from "../pages/Dashboard";
 import Students from "../pages/Students";
 import StudentDetails from "../pages/StudentDetails";
@@ -16,11 +17,15 @@ import Profile from "../pages/Profile";
 
 import ComingSoon from "../../../components/common/ComingSoon";
 
+// ============================================================
+// MENTOR AND COORDINATOR ROUTES
+// ============================================================
+
 const MentorRoutes = (
   <Fragment>
-    {/* ==========================================
+    {/* =====================================================
         MENTOR PORTAL
-    ========================================== */}
+        ===================================================== */}
 
     <Route
       path="/mentor"
@@ -49,9 +54,9 @@ const MentorRoutes = (
       <Route path="profile" element={<Profile />} />
     </Route>
 
-    {/* ==========================================
+    {/* =====================================================
         COORDINATOR PORTAL
-    ========================================== */}
+        ===================================================== */}
 
     <Route
       path="/coordinator"
@@ -63,26 +68,29 @@ const MentorRoutes = (
     >
       <Route index element={<Navigate to="dashboard" replace />} />
 
-      {/* Dashboard requires Coordinator-specific API */}
-      {/* COORDINATOR DASHBOARD */}
+      {/* Coordinator Dashboard */}
       <Route path="dashboard" element={<Dashboard />} />
 
-      {/* Uses COORDINATOR API based on URL */}
+      {/* Coordinator Students */}
       <Route path="students" element={<Students />} />
 
-      {/* Coordinator-specific details not yet verified */}
+      {/* Keep disabled until coordinator-scoped
+          student details API is implemented */}
       <Route path="students/:studentId" element={<ComingSoon />} />
 
-      {/* Do not reuse Mentor approval actions here */}
-      <Route path="pending-outpasses" element={<ComingSoon />} />
+      {/* Coordinator Pending Outpasses */}
+      <Route path="pending-outpasses" element={<PendingOutpasses />} />
 
-      <Route path="outpass/:outpassId" element={<ComingSoon />} />
+      {/* Coordinator Outpass Details */}
+      <Route path="outpass/:outpassId" element={<OutpassDetails />} />
 
-      <Route path="history" element={<ComingSoon />} />
+      {/* Coordinator History */}
+      <Route path="history" element={<History />} />
 
-      <Route path="notifications" element={<ComingSoon />} />
+      {/* Coordinator Notifications */}
+      <Route path="notifications" element={<Notifications />} />
 
-      {/* Shared faculty profile */}
+      {/* Shared Faculty Profile */}
       <Route path="profile" element={<Profile />} />
     </Route>
   </Fragment>
