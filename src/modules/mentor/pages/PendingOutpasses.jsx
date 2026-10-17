@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   Clock3,
   FileText,
   Filter,
@@ -19,8 +20,6 @@ import {
   UserRound,
   X,
   XCircle,
-  ClipboardCheck,
-  Phone,
 } from "lucide-react";
 
 import {
@@ -29,20 +28,18 @@ import {
   rejectOutpass,
 } from "../services/mentor.service";
 
-// ===========================================
+// =============================================
 // HELPERS
-// ===========================================
+// =============================================
 
-const getInitials = (name = "") => {
-  const parts = String(name).trim().split(/\s+/).filter(Boolean);
-
-  return (
-    parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "ST"
-  );
-};
+const getInitials = (name = "") =>
+  String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "ST";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -52,48 +49,38 @@ const formatDate = (value) => {
   if (Number.isNaN(date.getTime())) return "—";
 
   return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: "Asia/Kolkata",
-  }).format(date);
-};
-
-const formatTime = (value) => {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  return new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-    timeZone: "Asia/Kolkata",
   }).format(date);
 };
 
 const unwrapRequests = (response) => {
-  const payload = response?.data ?? response;
+  const data = response?.data ?? response;
 
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.requests)) return payload.requests;
-  if (Array.isArray(payload?.data?.requests)) {
-    return payload.data.requests;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.requests)) return data.requests;
+  if (Array.isArray(data?.data?.requests)) {
+    return data.data.requests;
   }
 
   return [];
 };
 
-const getErrorMessage = (error, fallback) =>
+const errorMessage = (error, fallback) =>
   error?.response?.data?.message || error?.message || fallback;
 
-// Parent consent MUST come from the backend.
-// Never treat a missing value as APPROVED.
+// =============================================
+// PARENT STATUS
+// =============================================
+
 const getParentStatus = (item) => {
-  const decision =
+  const raw =
     item?.parentDecision?.status ??
     item?.parentApproval?.status ??
     item?.parentConsentStatus ??
@@ -101,64 +88,92 @@ const getParentStatus = (item) => {
     item?.parentStatus ??
     item?.parentDecisionStatus;
 
-  if (decision == null || decision === "") {
+  if (raw == null || raw === "") {
     return "NOT AVAILABLE";
   }
 
-  const normalized = String(decision).trim().toUpperCase();
+  const status = String(raw).trim().toUpperCase();
 
-  if (["APPROVED", "ACCEPTED", "CONSENTED"].includes(normalized)) {
+  if (["APPROVED", "ACCEPTED", "CONSENTED"].includes(status)) {
     return "APPROVED";
   }
 
-  if (["REJECTED", "DECLINED"].includes(normalized)) {
+  if (["REJECTED", "DECLINED"].includes(status)) {
     return "REJECTED";
   }
 
-  if (["PENDING", "AWAITING", "NOT_RESPONDED"].includes(normalized)) {
+  if (["PENDING", "AWAITING", "NOT_RESPONDED"].includes(status)) {
     return "PENDING";
   }
 
   return "NOT AVAILABLE";
 };
 
-// ===========================================
+// Parent PENDING does not block faculty decision.
+// Backend must separately enforce approval permissions
+// and QR generation requirements.
+
+const canApproveRequest = (item) =>
+  String(item?.status || "PENDING").toUpperCase() === "PENDING" &&
+  ["PENDING", "APPROVED"].includes(getParentStatus(item)) &&
+  item?.canCurrentFacultyApprove !== false;
+
+// =============================================
 // STATUS BADGE
-// ===========================================
+// =============================================
 
 const StatusBadge = ({ status = "PENDING", small = false }) => {
-  const normalized = String(status).toUpperCase();
+  const value = String(status).toUpperCase();
 
-  const approved = normalized === "APPROVED";
-  const rejected = normalized === "REJECTED";
+  const Icon =
+    value === "APPROVED"
+      ? CheckCircle2
+      : value === "REJECTED"
+        ? XCircle
+        : Clock3;
 
-  const Icon = approved ? CheckCircle2 : rejected ? XCircle : Clock3;
-
-  const style = approved
-    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-    : rejected
-      ? "bg-red-50 text-red-700 ring-red-200"
-      : normalized === "NOT AVAILABLE"
-        ? "bg-slate-100 text-slate-600 ring-slate-200"
-        : "bg-amber-50 text-amber-700 ring-amber-200";
+  const color =
+    value === "APPROVED"
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      : value === "REJECTED"
+        ? "bg-red-50 text-red-700 ring-red-200"
+        : value === "NOT AVAILABLE"
+          ? "bg-slate-100 text-slate-600 ring-slate-200"
+          : "bg-amber-50 text-amber-700 ring-amber-200";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-bold ring-1 ring-inset ${style} ${
-        small ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+      className={`inline-flex items-center gap-1.5 rounded-full font-bold ring-1 ring-inset ${color} ${
+        small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
       }`}
     >
       <Icon size={13} />
-      {normalized}
+      {value}
     </span>
   );
 };
 
-// ===========================================
-// STAT CARD
-// ===========================================
+// =============================================
+// PARENT APPROVAL BADGE
+// =============================================
 
-const StatCard = ({ icon: Icon, label, value, color }) => {
+const ParentBadge = ({ item }) => (
+  <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+    <ShieldCheck size={17} className="text-emerald-600" />
+
+    <span className="text-xs font-semibold text-slate-700">
+      Parent Approval
+    </span>
+
+    <StatusBadge status={getParentStatus(item)} small />
+  </div>
+);
+
+// =============================================
+// STAT CARD
+// =============================================
+
+const StatCard = ({ icon: Icon, label, value, color = "blue" }) => {
   const colors = {
     blue: "bg-blue-50 text-blue-600",
     amber: "bg-amber-50 text-amber-600",
@@ -168,9 +183,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-          colors[color] || colors.blue
-        }`}
+        className={`flex h-11 w-11 items-center justify-center rounded-xl ${colors[color]}`}
       >
         <Icon size={21} />
       </div>
@@ -182,38 +195,9 @@ const StatCard = ({ icon: Icon, label, value, color }) => {
   );
 };
 
-// ===========================================
-// PARENT APPROVAL INDICATOR
-// ===========================================
-
-const ParentApprovalIndicator = ({ item }) => {
-  const parentStatus = getParentStatus(item);
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-      <ShieldCheck
-        size={17}
-        className={
-          parentStatus === "APPROVED"
-            ? "text-emerald-600"
-            : parentStatus === "REJECTED"
-              ? "text-red-600"
-              : "text-amber-600"
-        }
-      />
-
-      <span className="text-xs font-semibold text-slate-700">
-        Parent Approval
-      </span>
-
-      <StatusBadge status={parentStatus} small />
-    </div>
-  );
-};
-
-// ===========================================
+// =============================================
 // ACTION MODAL
-// ===========================================
+// =============================================
 
 const ActionModal = ({
   request,
@@ -226,10 +210,9 @@ const ActionModal = ({
 }) => {
   if (!request || !action) return null;
 
-  const isApprove = action === "approve";
+  const approving = action === "approve";
   const parentStatus = getParentStatus(request);
-
-  const canApprove = parentStatus === "APPROVED";
+  const allowed = canApproveRequest(request);
 
   return (
     <div
@@ -243,16 +226,16 @@ const ActionModal = ({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="outpass-modal-title"
+        aria-labelledby="mentor-modal-title"
         className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
             <h2
-              id="outpass-modal-title"
+              id="mentor-modal-title"
               className="text-lg font-bold text-slate-900"
             >
-              {isApprove ? "Approve Outpass" : "Reject Outpass"}
+              {approving ? "Approve Outpass" : "Reject Outpass"}
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
@@ -264,6 +247,7 @@ const ActionModal = ({
             type="button"
             onClick={onClose}
             disabled={loading}
+            aria-label="Close"
             className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"
           >
             <X size={20} />
@@ -285,28 +269,35 @@ const ActionModal = ({
             </p>
           </div>
 
-          <ParentApprovalIndicator item={request} />
+          <ParentBadge item={request} />
 
-          {isApprove ? (
-            <div>
-              {canApprove ? (
-                <p className="text-sm leading-6 text-slate-600">
-                  Parent consent is approved. Confirming will submit this
-                  outpass for university approval.
-                </p>
-              ) : (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-800">
-                    Parent consent is not confirmed.
-                  </p>
+          {approving ? (
+            <div
+              className={`rounded-xl border p-4 ${
+                parentStatus === "APPROVED"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : parentStatus === "PENDING"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+              }`}
+            >
+              <p className="text-sm font-semibold">
+                {parentStatus === "APPROVED"
+                  ? "Parent consent received"
+                  : parentStatus === "PENDING"
+                    ? "Parent response pending"
+                    : "Faculty approval unavailable"}
+              </p>
 
-                  <p className="mt-2 text-xs leading-5 text-amber-700">
-                    Approval cannot continue until the backend confirms explicit
-                    parent consent. Open Details to review the parent
-                    information.
-                  </p>
-                </div>
-              )}
+              <p className="mt-2 text-xs leading-5">
+                {parentStatus === "APPROVED"
+                  ? "You can record your faculty approval."
+                  : parentStatus === "PENDING"
+                    ? "Faculty approval may be recorded now. Parent status remains PENDING. QR must wait for valid parent consent."
+                    : parentStatus === "REJECTED"
+                      ? "Parent rejected this request. Approval is blocked."
+                      : "Parent status is unavailable. Refresh or check Details."}
+              </p>
             </div>
           ) : (
             <div>
@@ -321,9 +312,9 @@ const ActionModal = ({
                 id="rejection-remark"
                 value={remark}
                 onChange={(event) => setRemark(event.target.value)}
+                disabled={loading}
                 rows={4}
                 maxLength={500}
-                disabled={loading}
                 placeholder="Enter reason for rejection..."
                 className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500"
               />
@@ -339,7 +330,7 @@ const ActionModal = ({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
             >
               Cancel
             </button>
@@ -349,18 +340,18 @@ const ActionModal = ({
               onClick={onConfirm}
               disabled={
                 loading ||
-                (isApprove && !canApprove) ||
-                (!isApprove && !remark.trim())
+                (approving && !allowed) ||
+                (!approving && !remark.trim())
               }
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
-                isApprove
+                approving
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-red-600 hover:bg-red-700"
               }`}
             >
               {loading ? (
                 <Loader2 size={17} className="animate-spin" />
-              ) : isApprove ? (
+              ) : approving ? (
                 <Check size={17} />
               ) : (
                 <X size={17} />
@@ -368,7 +359,7 @@ const ActionModal = ({
 
               {loading
                 ? "Processing..."
-                : isApprove
+                : approving
                   ? "Confirm Approval"
                   : "Reject Request"}
             </button>
@@ -379,9 +370,9 @@ const ActionModal = ({
   );
 };
 
-// ===========================================
-// MAIN COMPONENT
-// ===========================================
+// =============================================
+// MAIN PAGE
+// =============================================
 
 const PendingOutpasses = () => {
   const [requests, setRequests] = useState([]);
@@ -396,6 +387,7 @@ const PendingOutpasses = () => {
 
   const [remark, setRemark] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
   const [error, setError] = useState("");
 
   // ===========================================
@@ -413,16 +405,13 @@ const PendingOutpasses = () => {
       setError("");
 
       const response = await getPendingRequests();
-      const items = unwrapRequests(response);
 
-      setRequests(items);
+      setRequests(unwrapRequests(response));
     } catch (err) {
-      console.error("Pending Outpasses Error:", err);
+      const msg = errorMessage(err, "Failed to load pending outpasses.");
 
-      const message = getErrorMessage(err, "Failed to load pending outpasses.");
-
-      setError(message);
-      toast.error(message);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -430,18 +419,18 @@ const PendingOutpasses = () => {
   }, []);
 
   useEffect(() => {
-    loadRequests();
+    void loadRequests();
   }, [loadRequests]);
 
   // ===========================================
-  // SEARCH AND FILTER
+  // SEARCH / FILTER
   // ===========================================
 
   const filteredRequests = useMemo(() => {
-    const keyword = search.toLowerCase().trim();
+    const keyword = search.trim().toLowerCase();
 
     return requests.filter((item) => {
-      const values = [
+      const text = [
         item.studentName,
         item.enrollmentNumber,
         item.student?.name,
@@ -452,13 +441,12 @@ const PendingOutpasses = () => {
         .join(" ")
         .toLowerCase();
 
-      const matchesSearch = !keyword || values.includes(keyword);
-
       const status = String(item.status || "PENDING").toUpperCase();
 
-      const matchesFilter = filter === "ALL" || status === filter;
-
-      return matchesSearch && matchesFilter;
+      return (
+        (!keyword || text.includes(keyword)) &&
+        (filter === "ALL" || status === filter)
+      );
     });
   }, [requests, search, filter]);
 
@@ -470,15 +458,18 @@ const PendingOutpasses = () => {
   // ACTION HANDLERS
   // ===========================================
 
-  const openAction = (request, action) => {
-    if (action === "approve" && getParentStatus(request) !== "APPROVED") {
+  const openAction = (item, action) => {
+    if (action === "approve" && !canApproveRequest(item)) {
       toast.warning(
-        "Parent approval is not confirmed. Review the parent consent first.",
+        getParentStatus(item) === "REJECTED"
+          ? "Parent rejected this request. Faculty approval is blocked."
+          : "Request not eligible for approval. Check details or refresh.",
       );
+
       return;
     }
 
-    setSelectedRequest(request);
+    setSelectedRequest(item);
     setSelectedAction(action);
     setRemark("");
   };
@@ -496,11 +487,8 @@ const PendingOutpasses = () => {
       return;
     }
 
-    if (
-      selectedAction === "approve" &&
-      getParentStatus(selectedRequest) !== "APPROVED"
-    ) {
-      toast.error("Parent consent must be confirmed first.");
+    if (selectedAction === "approve" && !canApproveRequest(selectedRequest)) {
+      toast.error("Request cannot currently be approved. Refresh the list.");
       return;
     }
 
@@ -521,8 +509,8 @@ const PendingOutpasses = () => {
         response?.message ||
           response?.data?.message ||
           (selectedAction === "approve"
-            ? "Outpass approved successfully."
-            : "Outpass rejected successfully."),
+            ? "Faculty approval recorded."
+            : "Outpass rejected."),
       );
 
       setSelectedRequest(null);
@@ -531,7 +519,7 @@ const PendingOutpasses = () => {
 
       await loadRequests(true);
     } catch (err) {
-      toast.error(getErrorMessage(err, `Failed to ${selectedAction} outpass.`));
+      toast.error(errorMessage(err, `Failed to ${selectedAction} outpass.`));
     } finally {
       setActionLoading(false);
     }
@@ -542,7 +530,7 @@ const PendingOutpasses = () => {
   // ===========================================
 
   const renderActions = (item, compact = false) => {
-    const parentApproved = getParentStatus(item) === "APPROVED";
+    const allowed = canApproveRequest(item);
 
     return (
       <div
@@ -563,11 +551,9 @@ const PendingOutpasses = () => {
         <button
           type="button"
           onClick={() => openAction(item, "approve")}
-          disabled={actionLoading || !parentApproved}
+          disabled={actionLoading || !allowed}
           title={
-            parentApproved
-              ? "Approve this outpass"
-              : "Parent consent must be confirmed first"
+            allowed ? "Record faculty approval" : "Not eligible for approval"
           }
           className={`inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 ${
             compact ? "flex-1" : ""
@@ -593,13 +579,12 @@ const PendingOutpasses = () => {
   };
 
   // ===========================================
-  // UI
+  // PAGE UI
   // ===========================================
 
   return (
     <div className="min-h-screen space-y-7 pb-10">
       {/* HEADER */}
-
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-blue-950 to-emerald-950 p-6 text-white shadow-xl sm:p-8">
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -613,26 +598,24 @@ const PendingOutpasses = () => {
             </h1>
 
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
-              Review student requests, verify parent consent and manage
-              authorized outpass approvals.
+              Review students and record faculty decisions. Pending parent
+              response does not block faculty approval.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => loadRequests(true)}
+            onClick={() => void loadRequests(true)}
             disabled={loading || refreshing}
             className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-50"
           >
             <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
-
             {refreshing ? "Refreshing..." : "Refresh Requests"}
           </button>
         </div>
       </section>
 
       {/* STATISTICS */}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           icon={ClipboardCheck}
@@ -656,8 +639,7 @@ const PendingOutpasses = () => {
         />
       </div>
 
-      {/* REQUEST QUEUE */}
-
+      {/* REQUESTS */}
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-5 sm:p-6">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
@@ -673,7 +655,7 @@ const PendingOutpasses = () => {
             </div>
 
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <div className="relative sm:min-w-[260px]">
+              <div className="relative sm:min-w-64">
                 <Search
                   size={17}
                   className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -709,23 +691,21 @@ const PendingOutpasses = () => {
         </div>
 
         {/* ERROR */}
-
         {error && (
-          <div className="m-5 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-700">{error}</p>
+          <div className="m-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
 
             <button
               type="button"
-              onClick={() => loadRequests()}
-              className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white"
+              onClick={() => void loadRequests()}
+              className="ml-2 font-bold underline"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* LOADING / EMPTY */}
-
+        {/* LOADING */}
         {loading ? (
           <div className="flex items-center justify-center gap-3 p-16 text-slate-500">
             <Loader2 size={20} className="animate-spin" />
@@ -748,7 +728,7 @@ const PendingOutpasses = () => {
               onClick={() => {
                 setSearch("");
                 setFilter("ALL");
-                loadRequests(true);
+                void loadRequests(true);
               }}
               className="mt-5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white"
             >
@@ -758,7 +738,6 @@ const PendingOutpasses = () => {
         ) : (
           <>
             {/* DESKTOP TABLE */}
-
             <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-full text-left">
                 <thead>
@@ -771,12 +750,12 @@ const PendingOutpasses = () => {
                       "APPLIED ON",
                       "STATUS",
                       "ACTIONS",
-                    ].map((heading) => (
+                    ].map((title) => (
                       <th
-                        key={heading}
-                        className="px-5 py-4 text-[11px] font-bold tracking-wider text-slate-500"
+                        key={title}
+                        className="px-5 py-4 text-xs font-bold tracking-wider text-slate-500"
                       >
-                        {heading}
+                        {title}
                       </th>
                     ))}
                   </tr>
@@ -786,14 +765,18 @@ const PendingOutpasses = () => {
                   {filteredRequests.map((item) => (
                     <tr key={item._id} className="hover:bg-emerald-50/40">
                       <td className="px-5 py-5">
-                        <div className="flex min-w-[175px] items-center gap-3">
+                        <div className="flex min-w-44 items-center gap-3">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white">
-                            {getInitials(item.studentName)}
+                            {getInitials(
+                              item.studentName || item.student?.name,
+                            )}
                           </div>
 
                           <div>
                             <p className="text-sm font-bold text-slate-900">
-                              {item.studentName || "Unknown Student"}
+                              {item.studentName ||
+                                item.student?.name ||
+                                "Unknown Student"}
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">
@@ -807,7 +790,7 @@ const PendingOutpasses = () => {
                         {item.destination || "—"}
                       </td>
 
-                      <td className="max-w-[220px] px-5 py-5 text-sm text-slate-600">
+                      <td className="max-w-56 px-5 py-5 text-sm text-slate-600">
                         <p className="truncate" title={item.reason || ""}>
                           {item.reason || "—"}
                         </p>
@@ -819,10 +802,6 @@ const PendingOutpasses = () => {
 
                       <td className="whitespace-nowrap px-5 py-5 text-sm text-slate-600">
                         {formatDate(item.createdAt)}
-
-                        <p className="text-xs text-slate-400">
-                          {formatTime(item.createdAt)}
-                        </p>
                       </td>
 
                       <td className="px-5 py-5">
@@ -837,7 +816,6 @@ const PendingOutpasses = () => {
             </div>
 
             {/* MOBILE / TABLET CARDS */}
-
             <div className="grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
               {filteredRequests.map((item) => (
                 <article
@@ -848,12 +826,14 @@ const PendingOutpasses = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 font-bold text-white">
-                          {getInitials(item.studentName)}
+                          {getInitials(item.studentName || item.student?.name)}
                         </div>
 
                         <div className="min-w-0">
                           <h3 className="truncate text-sm font-bold text-slate-900">
-                            {item.studentName || "Unknown Student"}
+                            {item.studentName ||
+                              item.student?.name ||
+                              "Unknown Student"}
                           </h3>
 
                           <p className="mt-1 text-xs text-slate-500">
@@ -873,7 +853,7 @@ const PendingOutpasses = () => {
                         Destination
                       </p>
 
-                      <p className="break-words text-sm font-semibold text-slate-800">
+                      <p className="wrap-break-word text-sm font-semibold text-slate-800">
                         {item.destination || "—"}
                       </p>
                     </div>
@@ -889,18 +869,11 @@ const PendingOutpasses = () => {
                       </p>
                     </div>
 
-                    {/* NEW PARENT APPROVAL SECTION */}
-
-                    <ParentApprovalIndicator item={item} />
+                    <ParentBadge item={item} />
 
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       <CalendarDays size={15} />
-
                       {formatDate(item.createdAt)}
-
-                      {formatTime(item.createdAt) && (
-                        <span>· {formatTime(item.createdAt)}</span>
-                      )}
                     </div>
                   </div>
 
@@ -912,14 +885,13 @@ const PendingOutpasses = () => {
             </div>
 
             {/* FOOTER */}
-
             <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4">
               <p className="text-xs text-slate-500">
                 Showing <strong>{filteredRequests.length}</strong> of{" "}
                 <strong>{requests.length}</strong> loaded requests
               </p>
 
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <div className="hidden items-center gap-1.5 text-xs text-slate-400 sm:flex">
                 <ShieldCheck size={14} />
                 Authorized faculty review
               </div>
@@ -929,7 +901,6 @@ const PendingOutpasses = () => {
       </section>
 
       {/* CONFIRMATION MODAL */}
-
       <ActionModal
         request={selectedRequest}
         action={selectedAction}
@@ -942,5 +913,9 @@ const PendingOutpasses = () => {
     </div>
   );
 };
+
+// =============================================
+// DEFAULT EXPORT — LAST LINE
+// =============================================
 
 export default PendingOutpasses;
