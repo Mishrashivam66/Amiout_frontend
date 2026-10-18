@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import ApplyOutpassForm from "../components/outpass/ApplyOutpassForm";
 import useOutpass from "../hooks/useOutpass";
@@ -12,7 +11,12 @@ const ApplyOutpass = () => {
   // Today's Date
   // ==========================================================
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
   // ==========================================================
   // Submit Outpass
@@ -44,7 +48,7 @@ const ApplyOutpass = () => {
         showConfirmButton: false,
       });
 
-      navigate("/student/history", { replace: true });
+      navigate("/student/outpass/history", { replace: true });
     } catch (error) {
       console.error("Apply Outpass Error :", error);
     }

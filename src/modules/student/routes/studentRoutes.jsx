@@ -1,4 +1,3 @@
-
 import { Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "../../../routes/ProtectedRoute";
@@ -13,6 +12,7 @@ import OutpassHistory from "../pages/OutpassHistory";
 import OutpassDetails from "../pages/OutpassDetails";
 import Notifications from "../pages/Notifications";
 import Activities from "../pages/Activities";
+
 const StudentRoutes = (
   <Route
     path="/student"
@@ -23,7 +23,7 @@ const StudentRoutes = (
     }
   >
     {/* Default */}
-    <Route index element={<Navigate to="dashboard" replace />} />
+    <Route index element={<Navigate to="/student/dashboard" replace />} />
 
     {/* Dashboard */}
     <Route path="dashboard" element={<StudentDashboard />} />
@@ -37,12 +37,15 @@ const StudentRoutes = (
     <Route path="active-outpass" element={<ActiveOutpass />} />
     <Route path="outpass/history" element={<OutpassHistory />} />
     <Route path="outpass/:outpassId" element={<OutpassDetails />} />
+
+    {/* Activities */}
     <Route path="activities" element={<Activities />} />
+
     {/* Notifications */}
     <Route path="notifications" element={<Notifications />} />
 
-    {/* Invalid Route */}
-    <Route path="*" element={<Navigate to="dashboard" replace />} />
+    {/* Invalid Route - Prevent redirect loop */}
+    <Route path="*" element={<Navigate to="/student/dashboard" replace />} />
   </Route>
 );
 

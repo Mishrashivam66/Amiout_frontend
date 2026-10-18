@@ -519,7 +519,7 @@ const Dashboard = () => {
               icon={FileText}
               title="Outpass History"
               description="Track all your requests"
-              onClick={() => navigate("/student/history")}
+              onClick={() => navigate("/student/outpass/history")}
             />
             <ActionCard
               icon={UserCircle}
