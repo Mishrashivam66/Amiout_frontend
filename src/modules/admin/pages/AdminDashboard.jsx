@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-
+import CredentialManagement from "../components/dashboard/CredentialManagement";
 import { FaArrowTrendUp, FaCalendarDays } from "react-icons/fa6";
 
 import {
@@ -199,6 +199,12 @@ const AdminDashboard = () => {
       {/* ================================================ */}
 
       <DashboardStats dashboard={dashboard} />
+
+      {/* ======================================================
+    ADMIN LOGIN CREDENTIAL MANAGEMENT
+====================================================== */}
+
+      <CredentialManagement />
 
       {/* ================================================ */}
       {/* AUTOMATIC STUDENT-MENTOR MAPPING */}

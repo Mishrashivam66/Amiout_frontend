@@ -1,590 +1,383 @@
 import {
   X,
-  Printer,
-  Download,
-  User,
   GraduationCap,
-  MapPin,
-  Calendar,
-  Clock,
-  Shield,
-  Phone,
-  Mail,
+  ClipboardList,
+  Users,
+  BadgeCheck,
+  QrCode,
+  ShieldCheck,
+  History,
+  CalendarClock,
 } from "lucide-react";
 
-import StatusBadge from "./StatusBadge";
+// ============================================================
+// HELPERS
+// ============================================================
 
-const formatDate = (date) => {
-  if (!date) return "-";
+const valueOf = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
 
-  const d = new Date(date);
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
 
-  if (isNaN(d.getTime())) return "-";
+  return String(value);
+};
 
-  return d.toLocaleString("en-IN", {
+const formatDate = (value) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     dateStyle: "medium",
     timeStyle: "short",
   });
 };
 
-const DetailItem = ({ icon, label, value }) => (
-  <div
-    className="
-      flex
-      items-start
-      gap-3
-      rounded-xl
-      border
-      border-[#223447]
-      bg-[#081018]
-      p-4
-    "
-  >
-    <div className="text-cyan-400">{icon}</div>
+const Field = ({ label, value }) => (
+  <div className="rounded-xl border border-[#223447] bg-[#081018] p-4">
+    <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
 
-    <div className="flex-1">
-      <p className="text-xs uppercase tracking-wider text-slate-500">{label}</p>
-
-      <p className="mt-1 font-medium text-white">{value || "-"}</p>
-    </div>
+    <p className="mt-2 break-words text-sm font-medium text-white">
+      {valueOf(value)}
+    </p>
   </div>
 );
 
-const SectionTitle = ({ icon, title }) => (
-  <div className="mb-5 flex items-center gap-3">
-    <div
-      className="
-        rounded-xl
-        bg-cyan-500/10
-        p-2
-        text-cyan-400
-      "
-    >
-      {icon}
-    </div>
+const Section = ({ title, icon: Icon, children }) => (
+  <section className="rounded-2xl border border-[#223447] bg-[#111827] p-5 sm:p-6">
+    <h3 className="mb-5 flex items-center gap-3 text-lg font-bold text-white">
+      <Icon size={23} className="text-cyan-400" />
+      {title}
+    </h3>
 
-    <h2 className="text-xl font-bold text-white">{title}</h2>
-  </div>
+    {children}
+  </section>
 );
 
-const OutpassDetailsModal = ({ open, onClose, outpass }) => {
+const Fields = ({ children }) => (
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+);
+
+// ============================================================
+// MODAL
+// ============================================================
+
+const OutpassDetailsModal = ({ open, outpass, onClose }) => {
   if (!open || !outpass) return null;
+
+  const {
+    student = {},
+    request = {},
+    parent = {},
+    faculty = {},
+    qr = {},
+    security = {},
+    timeline = [],
+    assignmentHistory = [],
+  } = outpass;
 
   return (
     <div
-      className="
-        fixed
-        inset-0
-        z-[999]
-        flex
-        items-center
-        justify-center
-        bg-black/70
-        backdrop-blur-sm
-        p-6
-      "
+      role="dialog"
+      aria-modal="true"
+      aria-label="Complete Outpass Details"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-6"
     >
-      <div
-        className="
-          max-h-[95vh]
-          w-full
-          max-w-7xl
-          overflow-y-auto
-          rounded-3xl
-          border
-          border-[#223447]
-          bg-[#0F172A]
-          shadow-2xl
-        "
-      >
-        {/* =========================================== */}
-        {/* Header */}
-        {/* =========================================== */}
-
-        <div
-          className="
-            sticky
-            top-0
-            z-20
-            flex
-            items-center
-            justify-between
-            border-b
-            border-[#223447]
-            bg-[#111827]
-            px-8
-            py-6
-          "
-        >
+      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-[#223447] bg-[#0F172A] shadow-2xl">
+        {/* HEADER */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#223447] bg-[#111827] p-5 sm:p-6">
           <div>
-            <h1
-              className="
-                text-3xl
-                font-bold
-                text-white
-              "
-            >
-              Outpass Details
-            </h1>
+            <h2 className="text-xl font-bold text-white sm:text-2xl">
+              Complete Outpass Details
+            </h2>
 
-            <p className="mt-2 text-slate-400">
-              Complete information about selected outpass.
+            <p className="mt-1 text-sm text-slate-400">
+              Outpass: {outpass.outpassId}
+            </p>
+
+            <p className="mt-1 text-xs text-green-400">
+              Read-only administrative monitoring
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <StatusBadge status={outpass.status} />
+            <span className="rounded-full border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-400">
+              {outpass.status || "UNKNOWN"}
+            </span>
 
             <button
-              className="
-                rounded-xl
-                bg-cyan-600
-                p-3
-                text-white
-                transition
-                hover:bg-cyan-500
-              "
-            >
-              <Printer size={20} />
-            </button>
-
-            <button
-              className="
-                rounded-xl
-                bg-green-600
-                p-3
-                text-white
-                transition
-                hover:bg-green-500
-              "
-            >
-              <Download size={20} />
-            </button>
-
-            <button
+              type="button"
               onClick={onClose}
-              className="
-                rounded-xl
-                bg-red-600
-                p-3
-                text-white
-                transition
-                hover:bg-red-500
-              "
+              aria-label="Close details"
+              className="rounded-xl bg-red-600 p-2.5 text-white hover:bg-red-700"
             >
               <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* =========================================== */}
-        {/* Body */}
-        {/* =========================================== */}
-
-        <div className="space-y-8 p-8">
-          {/* Student Information starts in Part 2 */}
-          {/* ====================================================== */}
-          {/* Student Information */}
-          {/* ====================================================== */}
-
-          <section>
-            <SectionTitle
-              icon={<User size={22} />}
-              title="Student Information"
-            />
-
-            <div className="rounded-3xl border border-[#223447] bg-[#111827] p-8">
-              <div className="flex flex-col gap-8 lg:flex-row">
-                {/* Avatar */}
-
-                <div className="flex flex-col items-center">
-                  <div
-                    className="
-            flex
-            h-28
-            w-28
-            items-center
-            justify-center
-            rounded-full
-            bg-gradient-to-r
-            from-cyan-500
-            to-blue-600
-            text-5xl
-            font-bold
-            text-white
-            shadow-xl
-          "
-                  >
-                    {outpass.student?.name?.charAt(0)?.toUpperCase() || "S"}
-                  </div>
-
-                  <h3 className="mt-5 text-2xl font-bold text-white">
-                    {outpass.student?.name || "-"}
-                  </h3>
-
-                  <p className="mt-1 text-slate-400">
-                    {outpass.student?.enrollmentNumber || "-"}
-                  </p>
-
-                  <div className="mt-4">
-                    <StatusBadge status={outpass.status} />
-                  </div>
-                </div>
-
-                {/* Details */}
-
-                <div className="grid flex-1 gap-5 md:grid-cols-2">
-                  <DetailItem
-                    icon={<Mail size={18} />}
-                    label="Email"
-                    value={outpass.student?.email}
-                  />
-
-                  <DetailItem
-                    icon={<Phone size={18} />}
-                    label="Phone"
-                    value={outpass.student?.phone}
-                  />
-
-                  <DetailItem
-                    icon={<GraduationCap size={18} />}
-                    label="Enrollment"
-                    value={outpass.student?.enrollmentNumber}
-                  />
-
-                  <DetailItem
-                    icon={<GraduationCap size={18} />}
-                    label="Course"
-                    value={outpass.student?.course}
-                  />
-
-                  <DetailItem
-                    icon={<GraduationCap size={18} />}
-                    label="Year"
-                    value={outpass.student?.year}
-                  />
-
-                  <DetailItem
-                    icon={<MapPin size={18} />}
-                    label="Hostel"
-                    value={outpass.student?.hostel}
-                  />
-
-                  <DetailItem
-                    icon={<MapPin size={18} />}
-                    label="Room Number"
-                    value={outpass.student?.roomNumber}
-                  />
-
-                  <DetailItem
-                    icon={<Calendar size={18} />}
-                    label="Applied On"
-                    value={formatDate(outpass.createdAt)}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          {/* ====================================================== */}
-          {/* Mentor & Outpass Information */}
-          {/* ====================================================== */}
-
-          <section className="grid gap-8 lg:grid-cols-2">
-            {/* ====================================================== */}
-            {/* Mentor Information */}
-            {/* ====================================================== */}
-
-            <div>
-              <SectionTitle
-                icon={<GraduationCap size={22} />}
-                title="Mentor Information"
+        {/* SCROLLABLE CONTENT */}
+        <div className="space-y-5 overflow-y-auto p-5 sm:p-6">
+          {/* STUDENT */}
+          <Section title="Student Information" icon={GraduationCap}>
+            <Fields>
+              <Field label="Name" value={student.name} />
+              <Field
+                label="Enrollment Number"
+                value={student.enrollmentNumber}
               />
-
-              <div className="rounded-3xl border border-[#223447] bg-[#111827] p-6">
-                <div className="grid gap-5">
-                  <DetailItem
-                    icon={<User size={18} />}
-                    label="Mentor Name"
-                    value={outpass.mentor?.name}
-                  />
-
-                  <DetailItem
-                    icon={<Mail size={18} />}
-                    label="Mentor Email"
-                    value={outpass.mentor?.email}
-                  />
-
-                  <DetailItem
-                    icon={<Phone size={18} />}
-                    label="Mentor Phone"
-                    value={outpass.mentor?.phone}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ====================================================== */}
-            {/* Outpass Information */}
-            {/* ====================================================== */}
-
-            <div>
-              <SectionTitle
-                icon={<MapPin size={22} />}
-                title="Outpass Information"
+              <Field label="Email" value={student.email} />
+              <Field label="Institute" value={student.institute} />
+              <Field
+                label="Program"
+                value={student.program || student.course}
               />
+              <Field label="Department" value={student.department} />
+              <Field label="Branch" value={student.branch} />
+              <Field label="Batch" value={student.batch} />
+              <Field label="Semester" value={student.semester} />
+              <Field label="Section" value={student.section} />
+              <Field label="Group" value={student.group} />
+            </Fields>
+          </Section>
 
-              <div className="rounded-3xl border border-[#223447] bg-[#111827] p-6">
-                <div className="grid gap-5">
-                  <DetailItem
-                    icon={<Shield size={18} />}
-                    label="Outpass Type"
-                    value={outpass.outpassType || outpass.type}
-                  />
-
-                  <DetailItem
-                    icon={<Calendar size={18} />}
-                    label="Exit Date"
-                    value={formatDate(outpass.outDate || outpass.exitDate)}
-                  />
-
-                  <DetailItem
-                    icon={<Clock size={18} />}
-                    label="Expected Return"
-                    value={formatDate(
-                      outpass.expectedReturn || outpass.returnDate,
-                    )}
-                  />
-
-                  <DetailItem
-                    icon={<MapPin size={18} />}
-                    label="Destination"
-                    value={outpass.destination}
-                  />
-                </div>
-
-                {/* Reason */}
-
-                <div className="mt-6">
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-                    Reason
-                  </h3>
-
-                  <div
-                    className="
-            rounded-2xl
-            border
-            border-[#223447]
-            bg-[#081018]
-            p-5
-            leading-7
-            text-slate-300
-          "
-                  >
-                    {outpass.reason || "No reason provided."}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-          {/* ====================================================== */}
-          {/* Timeline & Remarks */}
-          {/* ====================================================== */}
-
-          <section className="grid gap-8 lg:grid-cols-2">
-            {/* ============================================== */}
-            {/* Approval Timeline */}
-            {/* ============================================== */}
-
-            <div>
-              <SectionTitle
-                icon={<Clock size={22} />}
-                title="Approval Timeline"
+          {/* OUTPASS */}
+          <Section title="Outpass Information" icon={ClipboardList}>
+            <Fields>
+              <Field label="Outpass Number" value={outpass.outpassId} />
+              <Field label="Status" value={outpass.status} />
+              <Field label="Destination" value={request.destination} />
+              <Field label="Outpass Date" value={formatDate(request.outDate)} />
+              <Field label="Requested Exit Time" value={request.outTime} />
+              <Field label="Requested Return Time" value={request.inTime} />
+              <Field
+                label="Daily Trip Number"
+                value={request.dailyTripNumber}
               />
+              <Field label="Applied At" value={formatDate(request.createdAt)} />
+            </Fields>
 
-              <div className="rounded-3xl border border-[#223447] bg-[#111827] p-6">
-                <div className="space-y-8">
-                  {/* Applied */}
+            <div className="mt-4 rounded-xl border border-[#223447] bg-[#081018] p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                Reason
+              </p>
 
-                  <div className="flex gap-4">
-                    <div className="mt-1 h-4 w-4 rounded-full bg-blue-500" />
-
-                    <div>
-                      <h4 className="font-semibold text-white">
-                        Student Applied
-                      </h4>
-
-                      <p className="text-sm text-slate-400">
-                        {formatDate(outpass.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mentor */}
-
-                  <div className="flex gap-4">
-                    <div
-                      className={`mt-1 h-4 w-4 rounded-full ${
-                        outpass.mentorApprovedAt
-                          ? "bg-green-500"
-                          : "bg-slate-600"
-                      }`}
-                    />
-
-                    <div>
-                      <h4 className="font-semibold text-white">
-                        Mentor Approval
-                      </h4>
-
-                      <p className="text-sm text-slate-400">
-                        {outpass.mentorApprovedAt
-                          ? formatDate(outpass.mentorApprovedAt)
-                          : "Pending"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Exit */}
-
-                  <div className="flex gap-4">
-                    <div
-                      className={`mt-1 h-4 w-4 rounded-full ${
-                        outpass.securityExitAt ? "bg-cyan-500" : "bg-slate-600"
-                      }`}
-                    />
-
-                    <div>
-                      <h4 className="font-semibold text-white">
-                        Security Exit
-                      </h4>
-
-                      <p className="text-sm text-slate-400">
-                        {outpass.securityExitAt
-                          ? formatDate(outpass.securityExitAt)
-                          : "Waiting"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Return */}
-
-                  <div className="flex gap-4">
-                    <div
-                      className={`mt-1 h-4 w-4 rounded-full ${
-                        outpass.securityReturnAt
-                          ? "bg-purple-500"
-                          : "bg-slate-600"
-                      }`}
-                    />
-
-                    <div>
-                      <h4 className="font-semibold text-white">
-                        Security Return
-                      </h4>
-
-                      <p className="text-sm text-slate-400">
-                        {outpass.securityReturnAt
-                          ? formatDate(outpass.securityReturnAt)
-                          : "Not Returned"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">
+                {request.reason || "—"}
+              </p>
             </div>
+          </Section>
 
-            {/* ============================================== */}
-            {/* Remarks */}
-            {/* ============================================== */}
+          {/* PARENT */}
+          <Section title="Parent Consent & Verification" icon={Users}>
+            <Fields>
+              <Field label="Parent Name" value={parent.name} />
+              <Field label="Parent Mobile" value={parent.mobileMasked} />
+              <Field label="Consent Status" value={parent.status} />
+              <Field label="Consent Method" value={parent.method} />
+              <Field
+                label="Decision Time"
+                value={formatDate(parent.decidedAt)}
+              />
+              <Field label="SMS Status" value={parent.smsStatus} />
+              <Field label="Verified By" value={parent.verifiedBy?.name} />
+              <Field label="Verifier Role" value={parent.verifiedByRole} />
+              <Field label="Phone Outcome" value={parent.callOutcome} />
+              <Field
+                label="Call Verified At"
+                value={formatDate(parent.callVerifiedAt)}
+              />
+              <Field label="Call Remarks" value={parent.callRemarks} />
+            </Fields>
+          </Section>
 
-            <div>
-              <SectionTitle icon={<Shield size={22} />} title="Remarks" />
+          {/* FACULTY */}
+          <Section title="Faculty Approval & Escalation" icon={BadgeCheck}>
+            <Fields>
+              <Field label="Primary Mentor" value={faculty.mentor?.name} />
+              <Field
+                label="Assigned Authority"
+                value={faculty.assigned?.name}
+              />
+              <Field label="Assigned Role" value={faculty.assignedRole} />
+              <Field label="Approved By" value={faculty.approvedBy?.name} />
+              <Field label="Approver Role" value={faculty.approvedRole} />
+              <Field
+                label="Approved At"
+                value={formatDate(faculty.approvedAt)}
+              />
+              <Field label="Rejected By" value={faculty.rejectedBy?.name} />
+              <Field label="Rejected Role" value={faculty.rejectedRole} />
+              <Field
+                label="Rejected At"
+                value={formatDate(faculty.rejectedAt)}
+              />
+              <Field label="Approval Remark" value={faculty.approvalRemark} />
+              <Field label="Rejection Remark" value={faculty.rejectionRemark} />
+              <Field
+                label="Escalation/Bypass Used"
+                value={faculty.approvalBypass?.used}
+              />
+              <Field
+                label="Escalation Reason"
+                value={faculty.approvalBypass?.reason}
+              />
+              <Field
+                label="Parent Status Acknowledged"
+                value={
+                  faculty.parentConsentAcknowledgement?.parentStatusAtApproval
+                }
+              />
+            </Fields>
 
-              <div className="space-y-5">
-                <div className="rounded-2xl border border-[#223447] bg-[#111827] p-5">
-                  <h3 className="mb-3 font-semibold text-cyan-400">
-                    Mentor Remark
-                  </h3>
+            <div className="mt-5">
+              <h4 className="mb-3 font-semibold text-white">
+                Assignment History
+              </h4>
 
-                  <p className="leading-7 text-slate-300">
-                    {outpass.mentorRemark || "No remarks available."}
-                  </p>
+              {assignmentHistory.length === 0 ? (
+                <p className="text-sm text-slate-400">
+                  No reassignment recorded.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {assignmentHistory.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-[#223447] bg-[#081018] p-4"
+                    >
+                      <p className="font-medium text-white">
+                        {item.fromRole || "Initial"}
+                        {" → "}
+                        {item.toRole || "Assigned"}
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-300">
+                        {item.fromFaculty?.name || "—"}
+                        {" → "}
+                        {item.toFaculty?.name || "—"}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-400">
+                        {item.reason || "—"}
+                        {" · "}
+                        {formatDate(item.transferredAt)}
+                      </p>
+
+                      {item.remarks && (
+                        <p className="mt-2 text-sm text-slate-300">
+                          {item.remarks}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                <div className="rounded-2xl border border-[#223447] bg-[#111827] p-5">
-                  <h3 className="mb-3 font-semibold text-green-400">
-                    Security Remark
-                  </h3>
-
-                  <p className="leading-7 text-slate-300">
-                    {outpass.securityRemark || "No remarks available."}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-[#223447] bg-[#111827] p-5">
-                  <h3 className="mb-3 font-semibold text-orange-400">
-                    Admin Remark
-                  </h3>
-
-                  <p className="leading-7 text-slate-300">
-                    {outpass.adminRemark || "No remarks available."}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
-          </section>
+          </Section>
 
-          {/* ============================================== */}
-          {/* Footer */}
-          {/* ============================================== */}
+          {/* QR */}
+          <Section title="QR Pass" icon={QrCode}>
+            <Fields>
+              <Field label="QR Generated" value={qr.generated} />
+              <Field label="Generated At" value={formatDate(qr.generatedAt)} />
+              <Field label="Valid From" value={formatDate(qr.validFrom)} />
+              <Field label="Expires At" value={formatDate(qr.expiresAt)} />
+              <Field label="Revoked At" value={formatDate(qr.revokedAt)} />
+            </Fields>
 
-          <div className="mt-10 flex flex-col justify-end gap-4 border-t border-[#223447] pt-6 md:flex-row">
-            <button
-              onClick={() => window.print()}
-              className="
-      rounded-xl
-      bg-cyan-600
-      px-6
-      py-3
-      font-semibold
-      text-white
-      transition
-      hover:bg-cyan-500
-    "
-            >
-              Print
-            </button>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              QR metadata is shown here without exposing the private
+              verification token. The actual QR image is not included in this
+              monitoring endpoint.
+            </p>
+          </Section>
 
-            <button
-              className="
-      rounded-xl
-      bg-green-600
-      px-6
-      py-3
-      font-semibold
-      text-white
-      transition
-      hover:bg-green-500
-    "
-            >
-              Download PDF
-            </button>
+          {/* SECURITY */}
+          <Section title="Gate Security Verification" icon={ShieldCheck}>
+            <Fields>
+              <Field label="Exit Verified" value={security.exitVerified} />
+              <Field
+                label="Exit Time"
+                value={formatDate(security.exitVerifiedAt)}
+              />
+              <Field label="Exit Guard" value={security.exitVerifiedBy?.name} />
+              <Field label="Return Verified" value={security.entryVerified} />
+              <Field
+                label="Return Time"
+                value={formatDate(security.entryVerifiedAt)}
+              />
+              <Field
+                label="Return Guard"
+                value={security.entryVerifiedBy?.name}
+              />
+            </Fields>
+          </Section>
 
-            <button
-              onClick={onClose}
-              className="
-      rounded-xl
-      bg-red-600
-      px-6
-      py-3
-      font-semibold
-      text-white
-      transition
-      hover:bg-red-500
-    "
-            >
-              Close
-            </button>
-          </div>
+          {/* TIMELINE */}
+          <Section title="Complete Outpass Timeline" icon={History}>
+            {timeline.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                No timeline events available.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {[...timeline]
+                  .sort(
+                    (a, b) => new Date(a.performedAt) - new Date(b.performedAt),
+                  )
+                  .map((event, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-4 rounded-xl border border-[#223447] bg-[#081018] p-4"
+                    >
+                      <CalendarClock
+                        size={20}
+                        className="mt-0.5 shrink-0 text-cyan-400"
+                      />
+
+                      <div>
+                        <h4 className="font-semibold text-white">
+                          {event.title || event.event}
+                        </h4>
+
+                        <p className="mt-1 text-sm text-slate-300">
+                          {event.description || "—"}
+                        </p>
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          {formatDate(event.performedAt)}
+
+                          {event.performedBy?.name
+                            ? ` · ${event.performedBy.name}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </Section>
+        </div>
+
+        {/* FOOTER */}
+        <div className="flex shrink-0 justify-end border-t border-[#223447] bg-[#111827] p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
+          >
+            Close Details
+          </button>
         </div>
       </div>
     </div>

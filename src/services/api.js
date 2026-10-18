@@ -73,6 +73,8 @@ const refreshAccessToken = async () => {
           new CustomEvent("amiout:access-token-refreshed", {
             detail: {
               accessToken: newAccessToken,
+              role: data?.role,
+              roles: data?.roles,
             },
           }),
         );

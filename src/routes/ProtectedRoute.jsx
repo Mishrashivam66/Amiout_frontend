@@ -54,23 +54,37 @@ const isAssignmentActive = (assignment) => {
   return true;
 };
 
+// ==========================================
+// RESOLVE SERVER-GRANTED ROLES
+// ==========================================
+
 const getGrantedRoles = (user) => {
+  if (!user) return [];
+
   const declared = new Set();
 
-  if (Array.isArray(user?.roles)) {
+  if (Array.isArray(user.roles)) {
     user.roles.forEach((role) => {
       const value = normalizeRole(role);
-      if (value) declared.add(value);
+
+      if (value) {
+        declared.add(value);
+      }
     });
   }
 
-  const primary = normalizeRole(user?.role);
+  const primaryRole = normalizeRole(user.role);
 
-  if (primary) declared.add(primary);
+  if (primaryRole) {
+    declared.add(primaryRole);
+  }
 
-  // If the API provides actual role assignments,
-  // only active assignments can grant faculty roles.
-  if (Array.isArray(user?.roleAssignments)) {
+  // When assignments are included in the
+  // API profile, filter inactive faculty roles.
+  //
+  // The backend remains the final authority.
+
+  if (Array.isArray(user.roleAssignments)) {
     const activeFacultyRoles = new Set(
       user.roleAssignments
         .filter(isAssignmentActive)
@@ -82,26 +96,30 @@ const getGrantedRoles = (user) => {
     );
   }
 
-  // For session payloads that do not include assignments,
-  // this is a UI guard based on server-issued role claims.
-  // Backend endpoints MUST enforce actual authorization.
+  // The existing /auth/me endpoint returns
+  // server-authorized roles without assignments.
+
   return [...declared];
 };
 
-const getFallbackRoute = (grantedRoles, preferredRole) => {
-  const preferred = normalizeRole(preferredRole);
+// ==========================================
+// FALLBACK DASHBOARD
+// ==========================================
 
-  if (grantedRoles.includes(preferred)) {
-    return DASHBOARD_ROUTES[preferred] || "/login";
+const getFallbackRoute = (grantedRoles, selectedRole) => {
+  const role = normalizeRole(selectedRole);
+
+  if (grantedRoles.includes(role) && DASHBOARD_ROUTES[role]) {
+    return DASHBOARD_ROUTES[role];
   }
 
-  const firstRole = grantedRoles.find((role) => DASHBOARD_ROUTES[role]);
+  const firstValidRole = grantedRoles.find((item) => DASHBOARD_ROUTES[item]);
 
-  return DASHBOARD_ROUTES[firstRole] || "/login";
+  return firstValidRole ? DASHBOARD_ROUTES[firstValidRole] : "/login";
 };
 
 // ==========================================
-// LOADING SCREEN
+// AUTH LOADING SCREEN
 // ==========================================
 
 const AuthLoadingScreen = () => (
@@ -119,31 +137,67 @@ const AuthLoadingScreen = () => (
 );
 
 // ==========================================
+// ACCESS DENIED SCREEN
+// ==========================================
+
+const AccessDeniedScreen = () => (
+  <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-center text-white">
+    <div className="max-w-md">
+      <div className="mb-5 text-5xl">🔒</div>
+
+      <h1 className="text-2xl font-bold">Access Denied</h1>
+
+      <p className="mt-3 text-sm leading-6 text-slate-400">
+        Your account does not have permission to access this portal with the
+        currently selected role.
+      </p>
+    </div>
+  </main>
+);
+
+// ==========================================
 // PROTECTED ROUTE
 // ==========================================
 
 const ProtectedRoute = ({ children, roles = [] }) => {
-  const { user, loading, isAuthenticated, activeRole } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
 
   const location = useLocation();
 
-  // 1. Wait for authentication
+  // ========================================
+  // 1. WAIT FOR AUTHENTICATION
+  // ========================================
+
   if (loading) {
     return <AuthLoadingScreen />;
   }
 
-  // 2. Require login
+  // ========================================
+  // 2. REQUIRE AUTHENTICATION
+  // ========================================
+
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 3. Resolve server-granted account roles
+  // ========================================
+  // 3. RESOLVE CURRENT AUTHORIZED ROLES
+  // ========================================
+
   const grantedRoles = getGrantedRoles(user);
 
-  // activeRole is a UI preference, not an authorization grant.
-  const fallbackRoute = getFallbackRoute(grantedRoles, activeRole || user.role);
+  // Backend-issued role is authoritative.
+  // AuthContext updates user.role after
+  // successful backend role switching.
 
-  // 4. Mandatory first-login password change
+  const selectedRole = normalizeRole(user.role);
+
+  const fallbackRoute = getFallbackRoute(grantedRoles, selectedRole);
+
+  // ========================================
+  // 4. FIRST-LOGIN PASSWORD CHANGE
+  // ========================================
+
   const mustChangePassword = user.mustChangePassword === true;
 
   const isPasswordChangeRoute = location.pathname === "/change-password";
@@ -152,40 +206,47 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     return <Navigate to="/change-password" replace />;
   }
 
-  // 5. Prevent unnecessary password-change access
+  // ========================================
+  // 5. PREVENT UNNECESSARY PASSWORD CHANGE
+  // ========================================
+
   if (isPasswordChangeRoute && !mustChangePassword) {
+    if (fallbackRoute === "/login") {
+      return <AccessDeniedScreen />;
+    }
+
     return <Navigate to={fallbackRoute} replace />;
   }
 
-  // 6. Validate requested route role
-  const allowedRoles = roles.map(normalizeRole);
+  // ========================================
+  // 6. VALIDATE REQUESTED ROUTE ROLE
+  // ========================================
+
+  const allowedRoles = Array.isArray(roles)
+    ? roles.map(normalizeRole).filter(Boolean)
+    : [];
 
   if (allowedRoles.length > 0) {
-    const hasRequiredRole = allowedRoles.some((role) =>
-      grantedRoles.includes(role),
+    const hasRequiredRole = allowedRoles.some(
+      (role) => grantedRoles.includes(role) && selectedRole === role,
     );
 
     if (!hasRequiredRole) {
-      // Avoid repeatedly redirecting to the same route.
-      if (location.pathname === fallbackRoute) {
-        return (
-          <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-center text-white">
-            <div>
-              <h1 className="text-xl font-bold">Access Denied</h1>
+      // Prevent redirect loops when the
+      // current route is already the fallback.
 
-              <p className="mt-2 text-sm text-slate-400">
-                Your account is not authorized for this portal.
-              </p>
-            </div>
-          </main>
-        );
+      if (fallbackRoute === "/login" || location.pathname === fallbackRoute) {
+        return <AccessDeniedScreen />;
       }
 
       return <Navigate to={fallbackRoute} replace />;
     }
   }
 
-  // 7. Authorized page
+  // ========================================
+  // 7. AUTHORIZED PAGE
+  // ========================================
+
   return children;
 };
 

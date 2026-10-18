@@ -9,6 +9,12 @@ import ComingSoon from "../components/common/ComingSoon";
 import ActivateAccount from "../modules/auth/pages/ActivateAccount";
 import SecurityDashboard from "../pages/Security/SecurityDashboard";
 // ==========================================
+// HOD & HOI MODULES
+// ==========================================
+
+import HODDashboard from "../modules/hod/pages/HODDashboard";
+import HOIDashboard from "../modules/hoi/pages/HOIDashboard";
+// ==========================================
 // COMMON AUTH
 // ==========================================
 import ParentReview from "../modules/auth/pages/ParentReview";
@@ -204,11 +210,17 @@ const AppRoutes = () => {
           HOD DASHBOARD
       ==================================== */}
 
+      {/* ==========================================
+    HOD DASHBOARD
+========================================== */}
+
+      <Route path="/hod" element={<Navigate to="/hod/dashboard" replace />} />
+
       <Route
         path="/hod/dashboard"
         element={
           <ProtectedRoute roles={["HOD"]}>
-            <ComingSoon />
+            <HODDashboard />
           </ProtectedRoute>
         }
       />
@@ -217,11 +229,17 @@ const AppRoutes = () => {
           HOI DASHBOARD
       ==================================== */}
 
+      {/* ==========================================
+    HOI DASHBOARD
+========================================== */}
+
+      <Route path="/hoi" element={<Navigate to="/hoi/dashboard" replace />} />
+
       <Route
         path="/hoi/dashboard"
         element={
           <ProtectedRoute roles={["HOI"]}>
-            <ComingSoon />
+            <HOIDashboard />
           </ProtectedRoute>
         }
       />

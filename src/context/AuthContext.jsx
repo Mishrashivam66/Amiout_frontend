@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-
+import api from "../services/api";
 import {
   createContext,
   useCallback,
@@ -247,9 +247,43 @@ export const AuthProvider = ({ children }) => {
       const refreshedToken =
         event?.detail?.accessToken || localStorage.getItem("accessToken");
 
-      if (typeof refreshedToken === "string" && refreshedToken) {
-        setToken(refreshedToken);
+      if (typeof refreshedToken !== "string" || !refreshedToken) {
+        return;
       }
+
+      setToken(refreshedToken);
+
+      const refreshedRole = normalizeRole(event?.detail?.role);
+      const refreshedRoles = event?.detail?.roles;
+
+      if (!refreshedRole || !Array.isArray(refreshedRoles)) {
+        return;
+      }
+
+      const authorizedRoles = refreshedRoles.map(normalizeRole).filter(Boolean);
+
+      if (!authorizedRoles.includes(refreshedRole)) {
+        return;
+      }
+
+      setUser((currentUser) => {
+        if (!currentUser) return currentUser;
+
+        const updatedUser = {
+          ...currentUser,
+          role: refreshedRole,
+          roles: authorizedRoles,
+        };
+
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        return updatedUser;
+      });
+
+      setActiveRole(refreshedRole);
+
+      localStorage.setItem("role", refreshedRole);
+      localStorage.setItem("activeRole", refreshedRole);
     };
 
     const handleSessionExpired = () => {
@@ -294,12 +328,11 @@ export const AuthProvider = ({ children }) => {
   // SWITCH ROLE
   // ========================================
 
-  const switchRole = (newRole) => {
+  const switchRole = async (newRole) => {
     const normalizedRole = normalizeRole(newRole);
 
     if (!roles.includes(normalizedRole)) {
       toast.error("You are not authorized for this role.");
-
       return false;
     }
 
@@ -307,13 +340,50 @@ export const AuthProvider = ({ children }) => {
       return true;
     }
 
-    // A role switch must be authorized
-    // by the backend and issue a token
-    // for the selected active role.
+    try {
+      const response = await api.post("/auth/switch-role", {
+        role: normalizedRole,
+      });
 
-    toast.error("Role switching requires a new authorized session.");
+      const { accessToken, user: updatedUser } = response.data;
 
-    return false;
+      if (!accessToken || !updatedUser) {
+        throw new Error("Invalid role-switch response.");
+      }
+
+      const normalizedUser = normalizeUser(updatedUser);
+
+      sessionVersionRef.current += 1;
+
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+      localStorage.setItem("role", normalizedUser.role);
+      localStorage.setItem("activeRole", normalizedUser.role);
+
+      setToken(accessToken);
+      setUser(normalizedUser);
+      setActiveRole(normalizedUser.role);
+
+      toast.success(`Switched to ${normalizedRole}`);
+
+      navigate(
+        {
+          MENTOR: "/mentor/dashboard",
+          COORDINATOR: "/coordinator/dashboard",
+          HOD: "/hod/dashboard",
+          HOI: "/hoi/dashboard",
+        }[normalizedRole],
+        { replace: true },
+      );
+
+      return true;
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Unable to switch faculty role.",
+      );
+
+      return false;
+    }
   };
 
   // ========================================

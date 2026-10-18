@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
 
 import {
   ArrowRight,
@@ -27,33 +28,47 @@ import toast from "react-hot-toast";
 import { getProfile, updateAvailability } from "../services/mentor.service";
 
 // ============================================================
+
 // FACULTY ROLE ROUTES
+
 // Verify these paths against your App routes.
+
 // ============================================================
 
 const ROLE_ROUTES = {
   MENTOR: "/mentor/dashboard",
+
   COORDINATOR: "/coordinator/dashboard",
+
   HOD: "/hod/dashboard",
+
   HOI: "/hoi/dashboard",
 };
 
 const ROLE_LABELS = {
   MENTOR: "Mentor",
+
   COORDINATOR: "Coordinator",
+
   HOD: "Head of Department",
+
   HOI: "Head of Institute",
 };
 
 const ROLE_DESCRIPTIONS = {
   MENTOR: "Group-level outpass management",
+
   COORDINATOR: "Section-level coordination",
+
   HOD: "Department-level supervision",
+
   HOI: "Institute-level administration",
 };
 
 // ============================================================
+
 // HELPERS
+
 // ============================================================
 
 const display = (value) => {
@@ -73,7 +88,9 @@ const getErrorMessage = (error, fallback = "Something went wrong.") => {
 };
 
 // ============================================================
+
 // INFORMATION FIELD
+
 // ============================================================
 
 const Info = ({ icon: Icon, label, value }) => {
@@ -97,7 +114,9 @@ const Info = ({ icon: Icon, label, value }) => {
 };
 
 // ============================================================
+
 // SECTION WRAPPER
+
 // ============================================================
 
 const Section = ({ title, subtitle, icon: Icon, children }) => {
@@ -123,15 +142,21 @@ const Section = ({ title, subtitle, icon: Icon, children }) => {
 };
 
 // ============================================================
+
 // MENTOR PROFILE
+
 // ============================================================
 
 const Profile = () => {
   const navigate = useNavigate();
+
   const location = useLocation();
+  const { switchRole, user } = useAuth();
 
   // ==========================================================
+
   // STATE
+
   // ==========================================================
 
   const [profile, setProfile] = useState(null);
@@ -145,9 +170,12 @@ const Profile = () => {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
 
   const [selectedRole, setSelectedRole] = useState("");
+  const [switchingRole, setSwitchingRole] = useState(false);
 
   // ==========================================================
+
   // LOAD PROFILE FROM BACKEND
+
   // ==========================================================
 
   const fetchFacultyProfile = useCallback(async (showLoading = true) => {
@@ -177,6 +205,7 @@ const Profile = () => {
       return null;
     } finally {
       setLoading(false);
+
       setRefreshing(false);
     }
   }, []);
@@ -196,7 +225,9 @@ const Profile = () => {
 
         if (!cancelled) {
           setProfile(response.data);
+
           setError("");
+
           setLoading(false);
         }
       } catch (err) {
@@ -218,7 +249,9 @@ const Profile = () => {
   }, []);
 
   // ==========================================================
+
   // PROFILE INFORMATION
+
   // ==========================================================
 
   const faculty = profile?.faculty || {};
@@ -232,9 +265,13 @@ const Profile = () => {
     : [];
 
   // ==========================================================
+
   // AUTHORIZED ROLES
+
   //
+
   // No useMemo: avoids React Compiler memoization warning.
+
   // ==========================================================
 
   const authorizedRoles = Array.isArray(profile?.authorizedRoles)
@@ -248,7 +285,9 @@ const Profile = () => {
     : [];
 
   // ==========================================================
+
   // CURRENT ROUTE ROLE
+
   // ==========================================================
 
   const pathname = location.pathname.toLowerCase();
@@ -261,10 +300,15 @@ const Profile = () => {
     }) || "";
 
   // ==========================================================
+
   // EFFECTIVE SELECTED ROLE
+
   //
+
   // Derived value instead of useEffect/setState.
+
   // User selection is preserved if still authorized.
+
   // ==========================================================
 
   const effectiveSelectedRole = authorizedRoles.includes(selectedRole)
@@ -274,7 +318,9 @@ const Profile = () => {
       : authorizedRoles[0] || "";
 
   // ==========================================================
+
   // AVAILABILITY
+
   // ==========================================================
 
   const availability = profile?.availabilityStatus;
@@ -285,7 +331,9 @@ const Profile = () => {
     availability === "AVAILABLE" || availability === "UNAVAILABLE";
 
   // ==========================================================
+
   // UPDATE AVAILABILITY
+
   // ==========================================================
 
   const handleAvailabilityChange = async () => {
@@ -305,6 +353,7 @@ const Profile = () => {
       }
 
       // Refresh from backend after saving.
+
       const freshResponse = await getProfile();
 
       if (freshResponse?.success !== true || !freshResponse?.data) {
@@ -332,6 +381,7 @@ const Profile = () => {
       toast.error(getErrorMessage(err, "Unable to update availability."));
 
       // Re-fetch real DB status if something fails.
+
       await fetchFacultyProfile(false);
     } finally {
       setAvailabilitySaving(false);
@@ -339,46 +389,76 @@ const Profile = () => {
   };
 
   // ==========================================================
+
   // DASHBOARD ROLE SWITCH
+
   // ==========================================================
 
-  const handleRoleSwitch = () => {
-    if (
-      !effectiveSelectedRole ||
-      !authorizedRoles.includes(effectiveSelectedRole)
-    ) {
-      toast.error("You are not authorized for this faculty role.");
+  const handleRoleSwitch = async () => {
+    const targetRole = effectiveSelectedRole;
 
+    if (switchingRole) return;
+
+    if (!targetRole || !authorizedRoles.includes(targetRole)) {
+      toast.error("You are not authorized for this faculty role.");
       return;
     }
 
-    const route = ROLE_ROUTES[effectiveSelectedRole];
+    const route = ROLE_ROUTES[targetRole];
 
     if (!route) {
       toast.error("Dashboard route is not configured.");
-
       return;
     }
 
-    navigate(route);
+    if (targetRole === String(user?.role || "").toUpperCase()) {
+      navigate(route);
+      return;
+    }
+
+    if (typeof switchRole !== "function") {
+      toast.error("Role switching is not configured in AuthContext.");
+      return;
+    }
+
+    setSwitchingRole(true);
+
+    try {
+      // AuthContext verifies the role with the backend,
+      // saves the new JWT and updates the active session.
+      const result = await switchRole(targetRole);
+
+      if (result === false) return;
+      // AuthContext.switchRole handles navigation on success.
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Unable to switch dashboard role."));
+    } finally {
+      setSwitchingRole(false);
+    }
   };
 
   // ==========================================================
+
   // LOADING
+
   // ==========================================================
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="h-44 animate-pulse rounded-3xl bg-slate-200" />
+
         <div className="h-56 animate-pulse rounded-3xl bg-slate-100" />
+
         <div className="h-56 animate-pulse rounded-3xl bg-slate-100" />
       </div>
     );
   }
 
   // ==========================================================
+
   // ERROR STATE
+
   // ==========================================================
 
   if (!profile) {
@@ -406,13 +486,17 @@ const Profile = () => {
   }
 
   // ==========================================================
+
   // MAIN UI
+
   // ==========================================================
 
   return (
     <div className="space-y-7 pb-8">
       {/* ===================================================== */}
+
       {/* HEADER */}
+
       {/* ===================================================== */}
 
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 p-6 text-white shadow-xl sm:p-9">
@@ -468,7 +552,9 @@ const Profile = () => {
       )}
 
       {/* ===================================================== */}
+
       {/* OFFICIAL FACULTY INFORMATION */}
+
       {/* ===================================================== */}
 
       <Section
@@ -503,7 +589,9 @@ const Profile = () => {
       </Section>
 
       {/* ===================================================== */}
+
       {/* ACADEMIC ASSIGNMENTS */}
+
       {/* ===================================================== */}
 
       <Section
@@ -578,7 +666,9 @@ const Profile = () => {
       </Section>
 
       {/* ===================================================== */}
+
       {/* SWITCH DASHBOARD ROLE */}
+
       {/* ===================================================== */}
 
       <Section
@@ -643,10 +733,13 @@ const Profile = () => {
             <button
               type="button"
               onClick={handleRoleSwitch}
-              disabled={!effectiveSelectedRole}
+              disabled={!effectiveSelectedRole || switchingRole}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
             >
-              Open {ROLE_LABELS[effectiveSelectedRole] || "Selected"} Dashboard
+              {switchingRole
+                ? "Switching Dashboard..."
+                : `Open ${ROLE_LABELS[effectiveSelectedRole] || "Selected"} Dashboard`}
+
               <ArrowRight size={18} />
             </button>
           </>
@@ -676,7 +769,9 @@ const Profile = () => {
 
                     <p className="mt-1 text-xs text-slate-500">
                       {assignment.scopeType}
+
                       {" · "}
+
                       {assignment.scopeId}
                     </p>
                   </div>
@@ -690,7 +785,9 @@ const Profile = () => {
       </Section>
 
       {/* ===================================================== */}
+
       {/* FACULTY AVAILABILITY */}
+
       {/* ===================================================== */}
 
       <Section
