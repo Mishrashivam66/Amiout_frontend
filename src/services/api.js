@@ -1,8 +1,10 @@
 import axios from "axios";
 
-// ==========================================
+import { attachGlobalLoading } from "../utils/globalLoading";
+
+// ============================================================
 // API CONFIGURATION
-// ==========================================
+// ============================================================
 
 const baseURL = import.meta.env.VITE_API_URL;
 
@@ -19,9 +21,22 @@ const refreshClient = axios.create({
   },
 });
 
-// ==========================================
+// ============================================================
+// GLOBAL LOADING INTERCEPTORS
+//
+// IMPORTANT:
+// Must be attached BEFORE authentication response
+// interceptor so original 401 requests are finalized
+// before token refresh and retry.
+//
+// Axios response interceptors execute in registration order.
+// ============================================================
+
+attachGlobalLoading(api);
+
+// ============================================================
 // SESSION HELPERS
-// ==========================================
+// ============================================================
 
 const clearStoredSession = () => {
   localStorage.removeItem("accessToken");
@@ -50,9 +65,9 @@ const isPublicAuthRequest = (url = "") => {
   ].some((endpoint) => path.endsWith(endpoint));
 };
 
-// ==========================================
+// ============================================================
 // REFRESH REQUEST MANAGEMENT
-// ==========================================
+// ============================================================
 
 let refreshPromise = null;
 
@@ -89,12 +104,16 @@ const refreshAccessToken = async () => {
   return refreshPromise;
 };
 
-// ==========================================
+// ============================================================
 // REQUEST INTERCEPTOR
-// ==========================================
+// ============================================================
 
 api.interceptors.request.use(
   (config) => {
+    // ========================================================
+    // JWT AUTHORIZATION
+    // ========================================================
+
     const token = localStorage.getItem("accessToken");
 
     if (token) {
@@ -103,12 +122,12 @@ api.interceptors.request.use(
       config.headers.delete("Authorization");
     }
 
-    // ======================================
-    // HANDLE JSON AND EXCEL FILE UPLOADS
-    // ======================================
+    // ========================================================
+    // JSON AND EXCEL FILE UPLOADS
+    // ========================================================
 
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-      // Browser sets multipart boundary.
+      // Browser sets the multipart boundary.
       config.headers.set("Content-Type", undefined);
     } else if (!config.headers.get("Content-Type")) {
       config.headers.set("Content-Type", "application/json");
@@ -116,13 +135,12 @@ api.interceptors.request.use(
 
     return config;
   },
-
   (error) => Promise.reject(error),
 );
 
-// ==========================================
-// RESPONSE INTERCEPTOR
-// ==========================================
+// ============================================================
+// AUTHENTICATION RESPONSE INTERCEPTOR
+// ============================================================
 
 api.interceptors.response.use(
   (response) => response,
@@ -137,25 +155,25 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = originalRequest.url || "";
 
-    // ======================================
-    // HANDLE NON-401 ERRORS
-    // ======================================
+    // ========================================================
+    // NON-401 ERRORS
+    // ========================================================
 
     if (status !== 401) {
       return Promise.reject(error);
     }
 
-    // ======================================
-    // DO NOT REFRESH PUBLIC AUTH REQUESTS
-    // ======================================
+    // ========================================================
+    // NEVER REFRESH FOR PUBLIC AUTH REQUESTS
+    // ========================================================
 
     if (isPublicAuthRequest(requestUrl)) {
       return Promise.reject(error);
     }
 
-    // ======================================
+    // ========================================================
     // PREVENT INFINITE RETRIES
-    // ======================================
+    // ========================================================
 
     if (originalRequest._retry) {
       return Promise.reject(error);
@@ -164,19 +182,31 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      // ====================================
-      // REFRESH ACCESS TOKEN
-      // ====================================
+      // ======================================================
+      // REFRESH THE ACCESS TOKEN
+      // ======================================================
 
       const newAccessToken = await refreshAccessToken();
 
       originalRequest.headers = originalRequest.headers || {};
 
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      if (typeof originalRequest.headers.set === "function") {
+        originalRequest.headers.set(
+          "Authorization",
+          `Bearer ${newAccessToken}`,
+        );
+      } else {
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      }
 
-      // ====================================
-      // RETRY ORIGINAL REQUEST
-      // ====================================
+      // ======================================================
+      // RETRY THE ORIGINAL REQUEST
+      //
+      // The previous request has already been removed
+      // from the loader counter.
+      //
+      // The retry receives its own loading lifecycle.
+      // ======================================================
 
       return api(originalRequest);
     } catch (refreshError) {
@@ -187,8 +217,8 @@ api.interceptors.response.use(
   },
 );
 
-// ==========================================
-// EXPORT
-// ==========================================
+// ============================================================
+// EXPORT SHARED AXIOS INSTANCE
+// ============================================================
 
 export default api;

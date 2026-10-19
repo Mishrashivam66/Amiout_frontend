@@ -2,50 +2,80 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
 
-import api from "../../services/api";
-
-import {
-  attachGlobalLoading,
-  subscribeGlobalLoading,
-} from "../../utils/globalLoading";
-
-// Attach existing shared Axios instance.
-attachGlobalLoading(api);
+import { subscribeGlobalLoading } from "../../utils/globalLoading";
 
 export default function GlobalPageLoader() {
   const [visible, setVisible] = useState(false);
+
   const timerRef = useRef(null);
+  const visibleRef = useRef(false);
+
+  // ============================================================
+  // SUBSCRIBE TO GLOBAL API LOADING
+  // ============================================================
 
   useEffect(() => {
     const unsubscribe = subscribeGlobalLoading((activeRequests) => {
+      // ======================================================
+      // API REQUESTS IN PROGRESS
+      // ======================================================
+
       if (activeRequests > 0) {
-        // Start delay only when loader is not already scheduled.
-        if (timerRef.current === null) {
-          timerRef.current = setTimeout(() => {
-            setVisible(true);
-            timerRef.current = null;
-          }, 400);
-        }
-      } else {
-        if (timerRef.current !== null) {
-          clearTimeout(timerRef.current);
-          timerRef.current = null;
+        // Already visible: do not schedule another timer.
+        if (visibleRef.current) {
+          return;
         }
 
-        setVisible(false);
+        // A timer is already running.
+        if (timerRef.current !== null) {
+          return;
+        }
+
+        // Avoid flashing on very fast requests.
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+
+          visibleRef.current = true;
+          setVisible(true);
+        }, 400);
+
+        return;
       }
+
+      // ======================================================
+      // ALL TRACKED API REQUESTS COMPLETED
+      // ======================================================
+
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
+      visibleRef.current = false;
+      setVisible(false);
     });
 
     return () => {
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
 
       unsubscribe();
     };
   }, []);
 
-  if (!visible) return null;
+  // ============================================================
+  // DO NOT RENDER WHEN INACTIVE
+  // ============================================================
+
+  if (!visible) {
+    return null;
+  }
+
+  // ============================================================
+  // GLOBAL LOADING UI
+  // ============================================================
 
   return createPortal(
     <div
@@ -63,7 +93,6 @@ export default function GlobalPageLoader() {
         padding: "16px",
       }}
     >
-      {/* Compact loader card centered on viewport */}
       <div
         className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-7 text-center shadow-2xl"
         style={{
