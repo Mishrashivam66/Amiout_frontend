@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 
 import {
   CartesianGrid,
@@ -13,276 +14,424 @@ import {
   Cell,
 } from "recharts";
 
+import {
+  AlertTriangle,
+  BarChart3,
+  Loader2,
+  PieChart as PieIcon,
+} from "lucide-react";
 
-const monthlyData = [
-  {
-    month: "Jan",
-    approved: 80,
-    pending: 22,
-    rejected: 8,
-  },
-  {
-    month: "Feb",
-    approved: 92,
-    pending: 18,
-    rejected: 6,
-  },
-  {
-    month: "Mar",
-    approved: 105,
-    pending: 15,
-    rejected: 9,
-  },
-  {
-    month: "Apr",
-    approved: 118,
-    pending: 20,
-    rejected: 7,
-  },
-  {
-    month: "May",
-    approved: 134,
-    pending: 16,
-    rejected: 5,
-  },
-  {
-    month: "Jun",
-    approved: 152,
-    pending: 13,
-    rejected: 6,
-  },
-  {
-    month: "Jul",
-    approved: 170,
-    pending: 11,
-    rejected: 4,
-  },
+import dashboardService from "../../../../services/dashboard.service";
+
+// ============================================================
+// LIVE ANALYTICS
+//
+// GET /admin/dashboard/analytics
+//
+// Monthly data is never generated locally.
+// Missing API data is shown as unavailable.
+// ============================================================
+
+const COLORS = {
+  approved: "#34D399",
+  pending: "#FBBF24",
+  rejected: "#FB7185",
+  returned: "#60A5FA",
+  exited: "#A78BFA",
+};
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
-const statusData = [
-  {
-    name: "Approved",
-    value: 170,
-    color: "#16A34A",
-  },
-  {
-    name: "Pending",
-    value: 28,
-    color: "#F59E0B",
-  },
-  {
-    name: "Rejected",
-    value: 11,
-    color: "#EF4444",
-  },
-];
+const validNumber = (value) =>
+  value !== null &&
+  value !== undefined &&
+  value !== "" &&
+  Number.isFinite(Number(value));
 
-// ============================================================================
-// Tooltip
-// ============================================================================
+const toCount = (value) =>
+  validNumber(value) ? Math.max(0, Number(value)) : null;
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) {
+const monthLabel = (item) => {
+  const raw =
+    item.month ??
+    item.label ??
+    item.period ??
+    item.date ??
+    item._id?.month ??
+    item._id;
+
+  if (raw === null || raw === undefined) {
     return null;
   }
 
-  return (
-    <div
-      className="
-        rounded-xl
-        border
-        border-[#223447]
-        bg-[#081018]
-        p-4
-        shadow-xl
-      "
-    >
-      <p className="mb-2 font-semibold text-white">{label}</p>
+  if (
+    typeof raw === "number" ||
+    (/^\d{1,2}$/.test(String(raw)) && Number(raw) >= 1 && Number(raw) <= 12)
+  ) {
+    const index = Number(raw) - 1;
+    const year = item.year ?? item._id?.year;
 
-      {payload.map((item) => (
-        <div
-          key={item.name}
-          className="flex items-center justify-between gap-6"
-        >
-          <span
-            className="text-sm"
-            style={{
-              color: item.color,
-            }}
-          >
-            {item.name}
-          </span>
+    return `${MONTHS[index]}${year ? ` ${year}` : ""}`;
+  }
 
-          <span className="font-semibold text-white">{item.value}</span>
-        </div>
-      ))}
-    </div>
-  );
+  if (typeof raw === "object") {
+    return null;
+  }
+
+  return String(raw);
 };
 
-// ============================================================================
-// Component
-// ============================================================================
+const readMonthlyRows = (payload) => {
+  if (Array.isArray(payload)) return payload;
 
-const DashboardChart = () => {
+  const possible = [
+    payload?.monthly,
+    payload?.monthlyData,
+    payload?.monthlyAnalytics,
+    payload?.monthlyStats,
+    payload?.trends,
+    payload?.outpassTrends,
+    payload?.charts?.monthly,
+    payload?.analytics?.monthly,
+  ];
+
+  return possible.find(Array.isArray) || [];
+};
+
+const normalizeMonthly = (payload) => {
+  const rows = readMonthlyRows(payload);
+
+  return rows
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+
+      const month = monthLabel(item);
+
+      if (!month) return null;
+
+      const values = {
+        approved: toCount(item.approved ?? item.APPROVED),
+        pending: toCount(item.pending ?? item.PENDING),
+        rejected: toCount(item.rejected ?? item.REJECTED),
+      };
+
+      if (Object.values(values).every((value) => value === null)) {
+        return null;
+      }
+
+      return {
+        month,
+        approved: values.approved,
+        pending: values.pending,
+        rejected: values.rejected,
+      };
+    })
+    .filter(Boolean);
+};
+
+const readStatusData = (dashboard) => {
+  const outpasses = dashboard?.outpasses;
+
+  if (!outpasses || typeof outpasses !== "object") {
+    return [];
+  }
+
+  const statuses = [
+    ["Approved", "approved", COLORS.approved],
+    ["Pending", "pending", COLORS.pending],
+    ["Rejected", "rejected", COLORS.rejected],
+    ["Returned", "returned", COLORS.returned],
+    ["Exited", "exited", COLORS.exited],
+  ];
+
+  return statuses
+    .map(([name, field, color]) => {
+      const value = toCount(outpasses[field]);
+
+      return value === null ? null : { name, value, color };
+    })
+    .filter(Boolean);
+};
+
+const formatCount = (value) => Number(value).toLocaleString("en-IN");
+
+export default function DashboardChart({ dashboard, refreshKey = 0 }) {
+  const [monthly, setMonthly] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await dashboardService.getAnalytics();
+
+        if (response.data?.success === false) {
+          throw new Error(response.data.message || "Analytics request failed.");
+        }
+
+        const payload = response.data?.data ?? response.data;
+
+        const records = normalizeMonthly(payload);
+
+        if (active) {
+          setMonthly(records);
+        }
+      } catch (err) {
+        if (active) {
+          setMonthly([]);
+
+          setError(
+            err?.response?.data?.message ||
+              err?.message ||
+              "Unable to load monthly analytics.",
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, [refreshKey]);
+
+  const statusData = useMemo(() => readStatusData(dashboard), [dashboard]);
+
+  const totalStatusCount = statusData.reduce(
+    (sum, item) => sum + item.value,
+    0,
+  );
+
   return (
-    <section
-      className="
-        mt-8
-        grid
-        grid-cols-1
-        gap-6
-        xl:grid-cols-3
-      "
-    >
-      {/* ===================================================== */}
-      {/* Monthly Analytics */}
-      {/* ===================================================== */}
+    <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      {/* MONTHLY ANALYTICS */}
 
-      <div
-        className="
-          rounded-2xl
-          border
-          border-[#223447]
-          bg-[#122131]
-          p-6
-          xl:col-span-2
-        "
-      >
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white">
-            Monthly Outpass Analytics
-          </h2>
+      <article className="min-w-0 rounded-3xl border border-[#223447] bg-[#122131] p-5 sm:p-7 xl:col-span-2">
+        <div className="mb-7 flex items-center gap-3">
+          <div className="rounded-xl bg-amber-400/10 p-3 text-amber-400">
+            <BarChart3 size={23} />
+          </div>
 
-          <p className="mt-1 text-sm text-slate-400">
-            Outpass activity throughout the year
-          </p>
+          <div>
+            <h2 className="text-lg font-black text-white">
+              Monthly Outpass Analytics
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Historical records returned by the analytics API
+            </p>
+          </div>
         </div>
 
-        <div className="h-90">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthlyData}>
-              <CartesianGrid stroke="#223447" strokeDasharray="3 3" />
+        {loading ? (
+          <div className="flex h-[330px] items-center justify-center gap-3 text-sm text-slate-400">
+            <Loader2 size={22} className="animate-spin" />
+            Loading analytics...
+          </div>
+        ) : error ? (
+          <div className="flex min-h-[330px] items-center justify-center">
+            <div className="max-w-md text-center">
+              <AlertTriangle size={30} className="mx-auto text-amber-400" />
 
-              <XAxis dataKey="month" stroke="#94A3B8" />
+              <p className="mt-4 text-sm font-semibold text-white">
+                Monthly analytics unavailable
+              </p>
 
-              <YAxis stroke="#94A3B8" />
+              <p className="mt-2 break-words text-xs leading-6 text-slate-400">
+                {error}
+              </p>
+            </div>
+          </div>
+        ) : monthly.length === 0 ? (
+          <div className="flex h-[330px] flex-col items-center justify-center text-center">
+            <BarChart3 size={36} className="text-slate-600" />
 
-              <Tooltip content={<CustomTooltip />} />
+            <p className="mt-4 font-semibold text-white">
+              No monthly analytics available
+            </p>
 
-              <Legend />
-
-              <Line
-                type="monotone"
-                dataKey="approved"
-                stroke="#16A34A"
-                strokeWidth={3}
-                dot={{
-                  r: 5,
+            <p className="mt-2 max-w-sm text-xs leading-6 text-slate-400">
+              The analytics response did not contain a recognized monthly
+              series. No demo values are displayed.
+            </p>
+          </div>
+        ) : (
+          <div className="h-[330px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={monthly}
+                margin={{
+                  top: 12,
+                  right: 14,
+                  left: -18,
+                  bottom: 8,
                 }}
-                activeDot={{
-                  r: 8,
-                }}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="pending"
-                stroke="#F59E0B"
-                strokeWidth={3}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="rejected"
-                stroke="#EF4444"
-                strokeWidth={3}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      {/* ===================================================== */}
-      {/* Status Distribution */}
-      {/* ===================================================== */}
-
-      <div
-        className="
-          rounded-2xl
-          border
-          border-[#223447]
-          bg-[#122131]
-          p-6
-        "
-      >
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white">Status Distribution</h2>
-
-          <p className="mt-1 text-sm text-slate-400">
-            Current outpass statistics
-          </p>
-        </div>
-
-        <div className="h-75">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={105}
-                paddingAngle={4}
-                dataKey="value"
               >
-                {statusData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Pie>
+                <CartesianGrid stroke="#28384C" strokeDasharray="3 3" />
 
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+                <XAxis
+                  dataKey="month"
+                  stroke="#94A3B8"
+                  tick={{ fontSize: 11 }}
+                />
+
+                <YAxis
+                  stroke="#94A3B8"
+                  allowDecimals={false}
+                  tick={{ fontSize: 11 }}
+                />
+
+                <Tooltip
+                  contentStyle={{
+                    background: "#081629",
+                    border: "1px solid #334155",
+                    borderRadius: 12,
+                    color: "#fff",
+                  }}
+                  formatter={formatCount}
+                />
+
+                <Legend
+                  wrapperStyle={{
+                    fontSize: 12,
+                  }}
+                />
+
+                <Line
+                  name="Approved"
+                  type="monotone"
+                  dataKey="approved"
+                  stroke={COLORS.approved}
+                  strokeWidth={3}
+                  connectNulls={false}
+                  dot={{ r: 3 }}
+                />
+
+                <Line
+                  name="Pending"
+                  type="monotone"
+                  dataKey="pending"
+                  stroke={COLORS.pending}
+                  strokeWidth={3}
+                  connectNulls={false}
+                  dot={{ r: 3 }}
+                />
+
+                <Line
+                  name="Rejected"
+                  type="monotone"
+                  dataKey="rejected"
+                  stroke={COLORS.rejected}
+                  strokeWidth={3}
+                  connectNulls={false}
+                  dot={{ r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </article>
+
+      {/* STATUS DISTRIBUTION */}
+
+      <article className="min-w-0 rounded-3xl border border-[#223447] bg-[#122131] p-5 sm:p-7">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="rounded-xl bg-blue-400/10 p-3 text-blue-400">
+            <PieIcon size={23} />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-black text-white">
+              Status Distribution
+            </h2>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Database-backed outpass status counts
+            </p>
+          </div>
         </div>
 
-        {/* ============================================== */}
-        {/* Legend */}
-        {/* ============================================== */}
+        {totalStatusCount > 0 ? (
+          <div className="h-[245px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusData.filter((item) => item.value > 0)}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={65}
+                  outerRadius={95}
+                  paddingAngle={3}
+                  dataKey="value"
+                  nameKey="name"
+                >
+                  {statusData
+                    .filter((item) => item.value > 0)
+                    .map((item) => (
+                      <Cell key={item.name} fill={item.color} />
+                    ))}
+                </Pie>
 
-        <div className="mt-6 space-y-4">
+                <Tooltip
+                  contentStyle={{
+                    background: "#081629",
+                    border: "1px solid #334155",
+                    borderRadius: 12,
+                    color: "#fff",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="flex h-[245px] items-center justify-center text-center text-sm text-slate-400">
+            No status distribution data available
+          </div>
+        )}
+
+        <div className="mt-4 space-y-2">
           {statusData.map((item) => (
             <div
               key={item.name}
-              className="
-                flex
-                items-center
-                justify-between
-                rounded-xl
-                border
-                border-[#223447]
-                bg-[#081018]
-                px-4
-                py-3
-              "
+              className="flex items-center justify-between rounded-xl border border-[#223447] bg-[#081629] px-4 py-3"
             >
               <div className="flex items-center gap-3">
                 <span
                   className="h-3 w-3 rounded-full"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
+                  style={{ backgroundColor: item.color }}
                 />
 
                 <span className="text-sm text-slate-300">{item.name}</span>
               </div>
 
-              <span className="font-semibold text-white">{item.value}</span>
+              <span className="font-bold text-white">
+                {formatCount(item.value)}
+              </span>
             </div>
           ))}
         </div>
-      </div>
+      </article>
     </section>
   );
-};
-
-export default DashboardChart;
+}

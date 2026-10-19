@@ -11,108 +11,86 @@ import {
 
 import StatCard from "./StatCard";
 
+// ============================================================
+// AMIOUT ENTERPRISE - LIVE ADMIN STATISTICS
+//
+// Source: GET /api/v1/admin/dashboard
+//
+// Does not display fabricated growth percentages.
+// Does not silently convert missing API fields into zero.
+// ============================================================
+
 const DashboardStats = ({ dashboard }) => {
   const stats = [
     {
       title: "Total Students",
-      value: dashboard?.students?.total || 0,
+      value: dashboard?.students?.total,
       icon: FaUsers,
       color: "green",
-      percentage: "+12%",
-      description: "Registered Students",
+      description: "Student records",
     },
-
     {
       title: "Total Mentors",
-      value: dashboard?.mentors?.total || 0,
+      value: dashboard?.mentors?.total,
       icon: FaUserGraduate,
       color: "blue",
-      percentage: "+4%",
-      description: "Active Mentors",
+      description: "Mentor records",
     },
-
     {
       title: "Groups",
-      value: dashboard?.groups?.total || 0,
+      value: dashboard?.groups?.total,
       icon: FaLayerGroup,
       color: "purple",
-      percentage: "+2%",
-      description: "Mentor Groups",
+      description: "Academic mentor groups",
     },
-
     {
-      title: "Outpasses",
-      value: dashboard?.outpasses?.total || 0,
+      title: "Total Outpasses",
+      value: dashboard?.outpasses?.total,
       icon: FaClipboardList,
       color: "cyan",
-      percentage: "+18%",
-      description: "Total Requests",
+      description: "Outpass requests",
     },
-
     {
       title: "Pending",
-      value: dashboard?.outpasses?.pending || 0,
+      value: dashboard?.outpasses?.pending,
       icon: FaUserShield,
       color: "orange",
-      percentage: "Live",
-      description: "Awaiting Approval",
+      description: "Awaiting approval",
     },
-
     {
       title: "Approved",
-      value: dashboard?.outpasses?.approved || 0,
+      value: dashboard?.outpasses?.approved,
       icon: FaCheckCircle,
       color: "green",
-      percentage: "Latest",
-      description: "Approved Requests",
+      description: "Approved outpasses",
     },
-
     {
       title: "Rejected",
-      value: dashboard?.outpasses?.rejected || 0,
+      value: dashboard?.outpasses?.rejected,
       icon: FaTimesCircle,
       color: "red",
-      percentage: "Latest",
-      description: "Rejected Requests",
+      description: "Rejected outpasses",
     },
-
     {
       title: "Returned",
-      value: dashboard?.outpasses?.returned || 0,
+      value: dashboard?.outpasses?.returned,
       icon: FaDoorOpen,
       color: "blue",
-      percentage: "Latest",
-      description: "Returned Students",
+      description: "Completed return cycles",
     },
   ];
 
   return (
     <section className="w-full">
-      {/* ====================================================== */}
-      {/* Heading */}
-      {/* ====================================================== */}
-
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
+      <div className="mb-6">
+        <h2 className="text-2xl font-black text-white">Dashboard Overview</h2>
 
         <p className="mt-2 text-sm text-slate-400">
-          Real-time overview of AMIOUT activities.
+          Database-backed overview of AMIOUT activities.
         </p>
       </div>
 
-      {/* ====================================================== */}
-      {/* Grid */}
-      {/* ====================================================== */}
-
-      <div
-        className="
-          grid
-          grid-cols-1
-          gap-6
-          sm:grid-cols-2
-          xl:grid-cols-4
-        "
-      >
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((item) => (
           <StatCard
             key={item.title}
@@ -120,7 +98,6 @@ const DashboardStats = ({ dashboard }) => {
             value={item.value}
             icon={item.icon}
             color={item.color}
-            percentage={item.percentage}
             description={item.description}
           />
         ))}

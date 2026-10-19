@@ -1,154 +1,106 @@
-import CountUp from "react-countup";
+import { TrendingUp } from "lucide-react";
 
-const StatCard = ({
+const themes = {
+  green: {
+    background: "bg-emerald-400/10",
+    text: "text-emerald-400",
+    border: "border-emerald-400/20",
+  },
+  blue: {
+    background: "bg-blue-400/10",
+    text: "text-blue-400",
+    border: "border-blue-400/20",
+  },
+  red: {
+    background: "bg-rose-400/10",
+    text: "text-rose-400",
+    border: "border-rose-400/20",
+  },
+  orange: {
+    background: "bg-amber-400/10",
+    text: "text-amber-400",
+    border: "border-amber-400/20",
+  },
+  purple: {
+    background: "bg-violet-400/10",
+    text: "text-violet-400",
+    border: "border-violet-400/20",
+  },
+  cyan: {
+    background: "bg-cyan-400/10",
+    text: "text-cyan-400",
+    border: "border-cyan-400/20",
+  },
+};
+
+export default function StatCard({
   title,
   value,
   icon: Icon,
   color = "green",
   percentage,
   description,
-}) => {
-  const colors = {
-    green: {
-      bg: "bg-green-500/10",
-      text: "text-green-400",
-      border: "border-green-500/20",
-      glow: "shadow-green-500/10",
-    },
+}) {
+  const theme = themes[color] || themes.green;
 
-    blue: {
-      bg: "bg-blue-500/10",
-      text: "text-blue-400",
-      border: "border-blue-500/20",
-      glow: "shadow-blue-500/10",
-    },
+  const number =
+    value === null || value === undefined || value === ""
+      ? null
+      : Number(value);
 
-    red: {
-      bg: "bg-red-500/10",
-      text: "text-red-400",
-      border: "border-red-500/20",
-      glow: "shadow-red-500/10",
-    },
-
-    orange: {
-      bg: "bg-orange-500/10",
-      text: "text-orange-400",
-      border: "border-orange-500/20",
-      glow: "shadow-orange-500/10",
-    },
-
-    purple: {
-      bg: "bg-purple-500/10",
-      text: "text-purple-400",
-      border: "border-purple-500/20",
-      glow: "shadow-purple-500/10",
-    },
-
-    cyan: {
-      bg: "bg-cyan-500/10",
-      text: "text-cyan-400",
-      border: "border-cyan-500/20",
-      glow: "shadow-cyan-500/10",
-    },
-  };
-
-  const theme = colors[color] || colors.green;
+  const display =
+    number !== null && Number.isFinite(number)
+      ? number.toLocaleString("en-IN")
+      : "—";
 
   return (
-    <div
-      className={`
-        group
-        relative
-        overflow-hidden
-        rounded-2xl
-        border
-        ${theme.border}
-        bg-[#122131]
-        p-6
-        transition-all
-        duration-300
-        hover:-translate-y-1
-        hover:shadow-2xl
-        ${theme.glow}
-      `}
+    <article
+      className={`group relative overflow-hidden rounded-2xl border
+        ${theme.border} bg-[#122131] p-6
+        transition-all duration-300 hover:-translate-y-1
+        hover:shadow-xl`}
     >
-      {/* ========================================= */}
-      {/* Glow Effect */}
-      {/* ========================================= */}
-
       <div
-        className={`
-          absolute
-          -right-8
-          -top-8
-          h-28
-          w-28
-          rounded-full
-          blur-3xl
-          opacity-20
-          ${theme.bg}
-        `}
+        className={`pointer-events-none absolute -right-8 -top-8
+          h-28 w-28 rounded-full blur-3xl
+          ${theme.background}`}
       />
 
-      {/* ========================================= */}
-      {/* Header */}
-      {/* ========================================= */}
-
-      <div className="relative flex items-center justify-between">
-        <div>
+      <div className="relative flex items-center justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-slate-400">{title}</p>
 
-          <h2 className="mt-3 text-4xl font-bold text-white">
-            {Number(value) || 0}
-          </h2>
+          <h3 className="mt-3 text-3xl font-black text-white sm:text-4xl">
+            {display}
+          </h3>
         </div>
 
         <div
-          className={`
-            flex
-            h-16
-            w-16
-            items-center
-            justify-center
-            rounded-2xl
-            ${theme.bg}
-            ${theme.text}
-            transition-all
-            duration-300
-            group-hover:scale-110
-          `}
+          className={`flex h-14 w-14 shrink-0 items-center
+            justify-center rounded-2xl
+            ${theme.background} ${theme.text}
+            transition-transform group-hover:scale-110`}
         >
-          {Icon && <Icon className="text-3xl" />}
+          {Icon && <Icon size={27} />}
         </div>
       </div>
 
-      {/* ========================================= */}
-      {/* Footer */}
-      {/* ========================================= */}
-
-      <div className="mt-6 flex items-center justify-between">
-        <div>
-          {percentage && (
+      <div className="relative mt-6 flex flex-wrap items-center gap-2">
+        {percentage !== undefined &&
+          percentage !== null &&
+          percentage !== "" && (
             <span
-              className={`
-                rounded-full
-                px-3
-                py-1
-                text-xs
-                font-semibold
-                ${theme.bg}
-                ${theme.text}
-              `}
+              className={`inline-flex items-center gap-1 rounded-full
+              px-3 py-1 text-xs font-bold
+              ${theme.background} ${theme.text}`}
             >
+              <TrendingUp size={13} />
               {percentage}
             </span>
           )}
-        </div>
 
         {description && <p className="text-xs text-slate-400">{description}</p>}
       </div>
-    </div>
+    </article>
   );
-};
-
-export default StatCard;
+}
