@@ -26,7 +26,6 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
-  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -35,6 +34,8 @@ import api from "../../../services/api";
 
 const PAGE_SIZE = 10;
 const TOAST_DURATION = 1000;
+const MIN_BYPASS_REASON = 10;
+const MAX_REASON = 500;
 
 const configurations = {
   HOD: {
@@ -78,7 +79,10 @@ const formatDate = (value, withTime = false) => {
   if (!value) return "—";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
 
   return new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -94,6 +98,11 @@ const formatDate = (value, withTime = false) => {
       : {}),
   }).format(date);
 };
+
+// ============================================================
+// PARENT DECISION
+// Rejection cannot be bypassed.
+// ============================================================
 
 const getParentStatus = (item) => {
   if (normalize(item?.parentDecision?.callOutcome) === "REJECTED") {
@@ -161,7 +170,7 @@ function StatusBadge({ status }) {
 
 function StatCard({ icon: Icon, title, value, subtitle, iconStyle }) {
   return (
-    <div className="group relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-5 shadow-[0_3px_14px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/50">
+    <div className="group relative overflow-hidden rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
       <div className="absolute -right-7 -top-7 h-24 w-24 rounded-full bg-slate-50 opacity-60" />
 
       <div className="relative flex items-center justify-between">
@@ -174,9 +183,11 @@ function StatCard({ icon: Icon, title, value, subtitle, iconStyle }) {
       <p className="relative mt-5 text-sm font-semibold text-slate-500">
         {title}
       </p>
+
       <p className="relative mt-1 text-[32px] font-black tracking-tight text-[#101e36]">
         {value}
       </p>
+
       <p className="relative mt-1 text-xs text-slate-400">{subtitle}</p>
     </div>
   );
@@ -192,6 +203,7 @@ function InfoField({ label, value, icon: Icon }) {
 
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold text-slate-500">{label}</p>
+
           <p className="mt-1 break-words text-sm font-extrabold text-slate-900">
             {value || "—"}
           </p>
@@ -219,18 +231,20 @@ export default function AuthorityDashboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const [selected, setSelected] = useState(null);
   const [detailsLoadingId, setDetailsLoadingId] = useState(null);
+
   const [remark, setRemark] = useState("");
   const [approving, setApproving] = useState(false);
 
-  // ======================================================
-  // SEARCH AND STATUS FILTER
-  // ======================================================
+  // ==========================================================
+  // SEARCH & FILTERS
+  // ==========================================================
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -250,16 +264,19 @@ export default function AuthorityDashboard({
     setPage(1);
   }, [status, currentRole]);
 
-  // ======================================================
+  // ==========================================================
   // LOAD AUTHORIZED OUTPASSES
-  // ======================================================
+  // ==========================================================
 
   const loadRequests = useCallback(
     async ({ silent = false, notify = false } = {}) => {
       const requestVersion = ++versionRef.current;
 
-      if (silent) setRefreshing(true);
-      else setLoading(true);
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       setError("");
 
@@ -285,10 +302,10 @@ export default function AuthorityDashboard({
           );
         }
 
-        const { rows, pagination: paging } = extractList(payload);
+        const result = extractList(payload);
 
-        setRequests(rows);
-        setPagination(paging);
+        setRequests(result.rows);
+        setPagination(result.pagination);
 
         if (notify) {
           toast.success("Dashboard refreshed", {
@@ -337,9 +354,9 @@ export default function AuthorityDashboard({
       notify: true,
     });
 
-  // ======================================================
-  // OUTPASS DETAILS
-  // ======================================================
+  // ==========================================================
+  // REVIEW DETAILS
+  // ==========================================================
 
   const openDetails = async (outpassId) => {
     if (!outpassId || detailsLoadingId) return;
@@ -359,6 +376,7 @@ export default function AuthorityDashboard({
       }
 
       const data = payload?.data;
+
       const item =
         data?.outpass && typeof data.outpass === "object" ? data.outpass : data;
 
@@ -378,16 +396,29 @@ export default function AuthorityDashboard({
 
   const closeDetails = () => {
     if (approving) return;
+
     setSelected(null);
     setRemark("");
   };
 
-  // ======================================================
-  // DIRECT FACULTY APPROVAL
-  // ======================================================
+  // ==========================================================
+  // APPROVE OUTPASS
+  //
+  // PARENT APPROVED:
+  //   - No bypass reason required.
+  //   - Send empty remark.
+  //
+  // PARENT PENDING:
+  //   - Mandatory audited bypass reason.
+  //   - Minimum 10 characters.
+  //
+  // PARENT REJECTED:
+  //   - Always blocked.
+  // ==========================================================
 
   const approveOutpass = async () => {
     const id = selected?._id || selected?.id;
+
     if (!id || approving) return;
 
     if (!canApproveRequest(selected)) {
@@ -397,21 +428,38 @@ export default function AuthorityDashboard({
       return;
     }
 
+    const currentParentStatus = getParentStatus(selected);
+
+    const requiresBypass = currentParentStatus === "PENDING";
+
     const reason = remark.trim();
 
-    if (reason.length < 10) {
-      toast.error("Reason must be at least 10 characters.", {
-        duration: TOAST_DURATION,
-      });
-      return;
+    if (requiresBypass) {
+      if (reason.length < MIN_BYPASS_REASON) {
+        toast.error("Bypass reason must be at least 10 characters.", {
+          duration: TOAST_DURATION,
+        });
+        return;
+      }
+
+      if (reason.length > MAX_REASON) {
+        toast.error("Bypass reason cannot exceed 500 characters.", {
+          duration: TOAST_DURATION,
+        });
+        return;
+      }
     }
 
     try {
       setApproving(true);
 
+      // Backend must independently check the latest
+      // parent status. Frontend status is never trusted.
       const response = await api.patch(
         `${base}/outpass/${encodeURIComponent(id)}/approve`,
-        { remark: reason },
+        {
+          remark: requiresBypass ? reason : "",
+        },
       );
 
       if (response.data?.success === false) {
@@ -419,8 +467,12 @@ export default function AuthorityDashboard({
       }
 
       toast.success(
-        response.data?.message || "Faculty approval recorded successfully.",
-        { duration: TOAST_DURATION },
+        response.data?.message ||
+          `${currentRole} approval recorded successfully.`,
+        {
+          duration: TOAST_DURATION,
+          id: "authority-approval",
+        },
       );
 
       setSelected(null);
@@ -430,16 +482,18 @@ export default function AuthorityDashboard({
     } catch (err) {
       toast.error(errorMessage(err), {
         duration: TOAST_DURATION,
+        id: "authority-approval",
       });
+
       await loadRequests({ silent: true });
     } finally {
       setApproving(false);
     }
   };
 
-  // ======================================================
-  // CURRENT PAGE STATISTICS
-  // ======================================================
+  // ==========================================================
+  // STATS FOR CURRENT RESULT PAGE
+  // ==========================================================
 
   const counts = {
     total: requests.length,
@@ -487,11 +541,15 @@ export default function AuthorityDashboard({
   const parentStatus = getParentStatus(selected);
   const approvalAllowed = canApproveRequest(selected);
 
+  // NEW: Only parent PENDING needs mandatory reason.
+  const requiresBypass = parentStatus === "PENDING";
+
   const canSubmitApproval =
     approvalAllowed &&
-    remark.trim().length >= 10 &&
-    remark.trim().length <= 500 &&
-    !approving;
+    !approving &&
+    (!requiresBypass ||
+      (remark.trim().length >= MIN_BYPASS_REASON &&
+        remark.trim().length <= MAX_REASON));
 
   const filterLabels = {
     ALL: "All Outpasses",
@@ -503,15 +561,16 @@ export default function AuthorityDashboard({
   const activeFilterLabel =
     filterLabels[normalize(status)] || `${status} Outpasses`;
 
+  // ==========================================================
+  // UI
+  // ==========================================================
+
   return (
     <div className="space-y-7 pb-8">
-      {/* ==================================================
-          PREMIUM HERO
-      ================================================== */}
+      {/* HERO */}
 
       <section className="relative overflow-hidden rounded-[28px] bg-[#091b31] p-6 text-white shadow-xl shadow-slate-900/10 sm:p-8 xl:p-9">
         <div className="pointer-events-none absolute -right-28 -top-44 h-[400px] w-[400px] rounded-full bg-[#e5a83c]/15 blur-[85px]" />
-        <div className="pointer-events-none absolute bottom-[-150px] right-[20%] h-[300px] w-[300px] rounded-full bg-sky-500/10 blur-[80px]" />
 
         <div className="relative flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-2xl">
@@ -529,6 +588,7 @@ export default function AuthorityDashboard({
                 <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
                   {config.title}
                 </h1>
+
                 <p className="mt-1 text-xs font-bold text-amber-300">
                   {config.scope} Authority Workspace
                 </p>
@@ -540,15 +600,18 @@ export default function AuthorityDashboard({
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-[11px] font-semibold text-slate-200">
-                Department-scoped Access
-              </span>
-              <span className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-[11px] font-semibold text-slate-200">
-                Direct Faculty Approval
-              </span>
-              <span className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-[11px] font-semibold text-slate-200">
-                Audited Decisions
-              </span>
+              {[
+                `${config.scope}-scoped Access`,
+                "Direct Faculty Approval",
+                "Audited Decisions",
+              ].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-2 text-[11px] font-semibold text-slate-200"
+                >
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -557,19 +620,20 @@ export default function AuthorityDashboard({
               type="button"
               onClick={() => void refreshDashboard()}
               disabled={loading || refreshing}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f7b83c] px-5 py-3.5 text-sm font-extrabold text-[#091b31] shadow-lg shadow-amber-400/10 transition hover:bg-[#ffd16e] disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#f7b83c] px-5 py-3.5 text-sm font-extrabold text-[#091b31] transition hover:bg-[#ffd16e] disabled:opacity-50"
             >
               {refreshing ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <RefreshCw size={18} />
               )}
+
               {refreshing ? "Refreshing..." : "Refresh Dashboard"}
             </button>
 
             <Link
               to={`${base}/pending`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-white/15"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 text-sm font-bold text-white hover:bg-white/15"
             >
               Review Pending
               <ArrowRight size={17} />
@@ -578,9 +642,7 @@ export default function AuthorityDashboard({
         </div>
       </section>
 
-      {/* ==================================================
-          OVERVIEW
-      ================================================== */}
+      {/* STATISTICS */}
 
       <section>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -588,9 +650,11 @@ export default function AuthorityDashboard({
             <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-amber-600">
               Live Workspace
             </p>
+
             <h2 className="mt-1 text-xl font-black text-[#101e36]">
               Operational Overview
             </h2>
+
             <p className="mt-1 text-xs text-slate-500">
               Statistics for the currently loaded result page.
             </p>
@@ -612,35 +676,37 @@ export default function AuthorityDashboard({
         </div>
       </section>
 
-      {/* ==================================================
-          QUICK WORKSPACE INFORMATION
-      ================================================== */}
+      {/* QUICK INFORMATION */}
 
       <section className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-        <div className="flex items-start gap-4 rounded-[22px] border border-[#e6eaf0] bg-white p-5 shadow-sm">
+        <div className="flex items-start gap-4 rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="rounded-2xl bg-[#fff2d8] p-3 text-[#b77917]">
             <ShieldCheck size={23} />
           </div>
 
-          <div className="min-w-0">
+          <div>
             <h3 className="text-sm font-extrabold text-slate-900">
               Academic Approval Control
             </h3>
+
             <p className="mt-2 text-xs leading-6 text-slate-500">
-              Review pending requests within your authorized
-              {` ${config.scope.toLowerCase()} `}
-              scope. Parent pending approvals require a documented faculty
-              bypass reason. Explicit parent rejection always blocks approval.
+              Review requests within your authorized{" "}
+              {config.scope.toLowerCase()}. Parent APPROVED requests require
+              normal institutional approval only. Parent PENDING requests
+              require a documented bypass reason. Parent REJECTED requests
+              cannot be approved.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-[22px] border border-[#e6eaf0] bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-4 rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
           <div>
             <p className="text-xs font-semibold text-slate-500">Current View</p>
+
             <h3 className="mt-1 text-base font-black text-[#101e36]">
               {activeFilterLabel}
             </h3>
+
             <p className="mt-2 text-xs text-slate-400">
               {pagination.total ?? requests.length} matching records
             </p>
@@ -652,9 +718,7 @@ export default function AuthorityDashboard({
         </div>
       </section>
 
-      {/* ==================================================
-          OUTPASS CONTROL CENTER
-      ================================================== */}
+      {/* OUTPASS CONTROL CENTER */}
 
       <section className="overflow-hidden rounded-[25px] border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-6 sm:px-7">
@@ -682,12 +746,13 @@ export default function AuthorityDashboard({
                   size={18}
                   className="pointer-events-none absolute left-3.5 top-3 text-slate-400"
                 />
+
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Student, enrollment, outpass..."
-                  className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white sm:w-72"
+                  className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] py-2.5 pl-10 pr-4 text-sm outline-none focus:border-amber-400 sm:w-72"
                 />
               </div>
 
@@ -724,6 +789,7 @@ export default function AuthorityDashboard({
         )}
 
         {/* DESKTOP TABLE */}
+
         <div className="hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[850px] text-left">
             <thead className="bg-[#f8fafc] text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
@@ -750,10 +816,12 @@ export default function AuthorityDashboard({
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eaf0fa] text-blue-700">
                             <UserRound size={20} />
                           </div>
+
                           <div>
                             <p className="text-sm font-extrabold text-slate-900">
                               {getStudentName(item)}
                             </p>
+
                             <p className="mt-1 text-xs text-slate-500">
                               {item.enrollmentNumber || "—"}
                             </p>
@@ -782,7 +850,7 @@ export default function AuthorityDashboard({
                           type="button"
                           disabled={!id || detailsLoadingId !== null}
                           onClick={() => void openDetails(id)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-[#101e36] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#223954] disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl bg-[#101e36] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#223954] disabled:opacity-50"
                         >
                           {detailsLoadingId === id ? (
                             <Loader2 size={15} className="animate-spin" />
@@ -799,7 +867,8 @@ export default function AuthorityDashboard({
           </table>
         </div>
 
-        {/* MOBILE / TABLET CARDS */}
+        {/* MOBILE CARDS */}
+
         <div className="grid gap-4 p-4 sm:grid-cols-2 lg:hidden">
           {!loading &&
             !error &&
@@ -811,26 +880,26 @@ export default function AuthorityDashboard({
                   key={id}
                   className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                        <UserRound size={20} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-extrabold text-slate-900">
-                          {getStudentName(item)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {item.enrollmentNumber || "—"}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                      <UserRound size={20} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-extrabold text-slate-900">
+                        {getStudentName(item)}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        {item.enrollmentNumber || "—"}
+                      </p>
                     </div>
                   </div>
 
                   <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                     <div className="flex justify-between gap-2 text-xs">
                       <span className="text-slate-500">Outpass</span>
-                      <span className="font-bold text-slate-900">
+                      <span className="font-bold">
                         {item.outpassId || item.outpassNumber || "—"}
                       </span>
                     </div>
@@ -879,14 +948,18 @@ export default function AuthorityDashboard({
             <div className="rounded-2xl bg-amber-50 p-4 text-amber-600">
               <ClipboardList size={28} />
             </div>
+
             <h3 className="mt-4 text-base font-extrabold text-slate-900">
               No Matching Outpasses
             </h3>
+
             <p className="mt-2 max-w-sm text-xs leading-6 text-slate-500">
               No requests match this filter in your accessible academic scope.
             </p>
           </div>
         )}
+
+        {/* PAGINATION */}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-[#fafbfe] px-5 py-4 sm:px-7">
           <p className="text-xs font-semibold text-slate-500">
@@ -921,9 +994,9 @@ export default function AuthorityDashboard({
         </div>
       </section>
 
-      {/* ==================================================
-          OUTPASS REVIEW MODAL
-      ================================================== */}
+      {/* ======================================================
+          REVIEW MODAL
+      ====================================================== */}
 
       {selected && (
         <div
@@ -940,11 +1013,14 @@ export default function AuthorityDashboard({
             aria-labelledby="authority-review-heading"
             className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[26px] bg-white shadow-2xl"
           >
+            {/* MODAL HEADER */}
+
             <div className="flex shrink-0 items-center justify-between bg-[#091b31] px-5 py-5 text-white sm:px-7">
               <div>
                 <p className="text-[11px] font-bold tracking-wider text-amber-300">
                   AMIOUT · {currentRole} REVIEW
                 </p>
+
                 <h2
                   id="authority-review-heading"
                   className="mt-1 text-xl font-black"
@@ -965,6 +1041,8 @@ export default function AuthorityDashboard({
             </div>
 
             <div className="space-y-5 overflow-y-auto p-5 sm:p-7">
+              {/* REQUEST & PARENT STATUS */}
+
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
                 <div>
                   <p className="text-xs text-slate-500">
@@ -983,32 +1061,39 @@ export default function AuthorityDashboard({
                 </div>
               </div>
 
+              {/* STUDENT DETAILS */}
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <InfoField
                   icon={UserRound}
                   label="Student Name"
                   value={getStudentName(selected)}
                 />
+
                 <InfoField
                   icon={Hash}
                   label="Enrollment Number"
                   value={selected.enrollmentNumber}
                 />
+
                 <InfoField
                   icon={FileText}
                   label="Outpass Number"
                   value={selected.outpassId || selected.outpassNumber}
                 />
+
                 <InfoField
                   icon={CalendarDays}
                   label="Outpass Date"
                   value={formatDate(selected.outDate || selected.createdAt)}
                 />
+
                 <InfoField
                   icon={MapPin}
                   label="Destination"
                   value={selected.destination}
                 />
+
                 <InfoField
                   icon={ShieldCheck}
                   label="QR Status"
@@ -1022,18 +1107,24 @@ export default function AuthorityDashboard({
                 />
               </div>
 
+              {/* STUDENT REASON */}
+
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-bold text-slate-500">
                   Student's Outpass Reason
                 </p>
+
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">
                   {selected.reason || "Not available"}
                 </p>
               </div>
 
+              {/* PARENT REJECTED */}
+
               {parentStatus === "REJECTED" && (
                 <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                   <XCircle size={20} className="shrink-0 text-red-600" />
+
                   <p className="text-sm font-semibold leading-6 text-red-800">
                     Parent rejected this request. Faculty approval and QR
                     issuance are blocked.
@@ -1047,55 +1138,113 @@ export default function AuthorityDashboard({
                 </div>
               )}
 
+              {/* ==================================================
+                  DYNAMIC APPROVAL PANEL
+              ================================================== */}
+
               {approvalAllowed && (
-                <div className="space-y-4 rounded-[20px] border border-amber-200 bg-amber-50/70 p-5">
+                <div
+                  className={`space-y-4 rounded-[20px] border p-5 ${
+                    requiresBypass
+                      ? "border-amber-200 bg-amber-50/70"
+                      : "border-emerald-200 bg-emerald-50/60"
+                  }`}
+                >
                   <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-amber-100 p-2.5 text-amber-700">
-                      <ShieldCheck size={21} />
+                    <div
+                      className={`rounded-xl p-2.5 ${
+                        requiresBypass
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {requiresBypass ? (
+                        <ShieldCheck size={21} />
+                      ) : (
+                        <CheckCircle2 size={21} />
+                      )}
                     </div>
 
                     <div>
                       <h3 className="text-sm font-black text-slate-900">
-                        Authorize as {currentRole}
+                        {requiresBypass
+                          ? `Faculty Bypass Authorization · ${currentRole}`
+                          : `Authorize as ${currentRole}`}
                       </h3>
+
                       <p className="mt-2 text-xs leading-6 text-slate-700">
-                        {parentStatus === "PENDING"
+                        {requiresBypass
                           ? "Parent consent is still PENDING. A documented faculty-authorized bypass reason is mandatory. This action does not count as parent consent."
-                          : "This direct institutional approval will be recorded with the authority, time and reason."}
+                          : "Parent approval has already been received. You may complete the institutional approval without entering a bypass reason."}
                       </p>
                     </div>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="authority-approval-remark"
-                      className="mb-2 block text-xs font-extrabold text-slate-800"
-                    >
-                      Approval / Bypass Reason *
-                    </label>
+                  {/* ONLY PENDING PARENT NEEDS REASON */}
 
-                    <textarea
-                      id="authority-approval-remark"
-                      value={remark}
-                      onChange={(event) => setRemark(event.target.value)}
-                      rows={4}
-                      maxLength={500}
-                      disabled={approving}
-                      placeholder="Write the official reason for authorizing this request..."
-                      className="w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-amber-500"
-                    />
+                  {requiresBypass && (
+                    <div>
+                      <label
+                        htmlFor="authority-approval-remark"
+                        className="mb-2 block text-xs font-extrabold text-slate-800"
+                      >
+                        Parent Pending Bypass Reason *
+                      </label>
 
-                    <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-500">
-                      <span>Minimum 10 characters</span>
-                      <span>{remark.trim().length}/500</span>
+                      <textarea
+                        id="authority-approval-remark"
+                        value={remark}
+                        onChange={(event) => setRemark(event.target.value)}
+                        rows={4}
+                        maxLength={MAX_REASON}
+                        disabled={approving}
+                        placeholder="Write the official reason for approving while parent consent is pending..."
+                        className="w-full resize-none rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-amber-500"
+                      />
+
+                      <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-500">
+                        <span>Minimum {MIN_BYPASS_REASON} characters</span>
+
+                        <span>
+                          {remark.trim().length}/{MAX_REASON}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* NORMAL PARENT-APPROVED INFORMATION */}
+
+                  {!requiresBypass && (
+                    <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-white p-4">
+                      <CheckCircle2
+                        size={20}
+                        className="shrink-0 text-emerald-600"
+                      />
+
+                      <div>
+                        <p className="text-sm font-extrabold text-emerald-900">
+                          Parent Consent Approved
+                        </p>
+
+                        <p className="mt-1 text-xs leading-6 text-emerald-800">
+                          No parent bypass is required. This action records only
+                          the authorized university decision.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CONFIRM APPROVAL */}
 
                   <button
                     type="button"
                     onClick={() => void approveOutpass()}
                     disabled={!canSubmitApproval}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#f7b83c] px-4 py-3.5 text-sm font-black text-[#091b31] transition hover:bg-[#ffd16e] disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      requiresBypass
+                        ? "bg-[#f7b83c] text-[#091b31] hover:bg-[#ffd16e]"
+                        : "bg-emerald-600 text-white hover:bg-emerald-700"
+                    }`}
                   >
                     {approving ? (
                       <Loader2 size={19} className="animate-spin" />
@@ -1109,8 +1258,8 @@ export default function AuthorityDashboard({
                   </button>
 
                   <p className="text-center text-[11px] leading-5 text-slate-500">
-                    Final academic scope, daily quota and QR generation checks
-                    are performed by the backend.
+                    Academic scope, current parent decision, daily quota and QR
+                    generation checks must be verified by the backend.
                   </p>
                 </div>
               )}
