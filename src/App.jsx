@@ -1,17 +1,24 @@
-// ==========================================
-// IMPORTS
-// ==========================================
+/* ==========================================
+   AMIOUT ENTERPRISE - APP
+========================================== */
 
-import { Routes, Route, Navigate } from "react-router-dom";
-
+import GlobalPageLoader from "./components/common/GlobalPageLoader";
 import AppRoutes from "./routes/AppRoutes";
 
-// ==========================================
-// APP
-// ==========================================
+/* ==========================================
+   APP COMPONENT
+========================================== */
 
 const App = () => {
-  return <AppRoutes />;
+  return (
+    <>
+      {/* GLOBAL API LOADING INDICATOR */}
+      <GlobalPageLoader />
+
+      {/* ALL EXISTING APPLICATION ROUTES */}
+      <AppRoutes />
+    </>
+  );
 };
 
 export default App;
