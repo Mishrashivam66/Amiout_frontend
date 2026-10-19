@@ -91,14 +91,26 @@ const getParentStatus = (item) => {
 
 // Coordinator MUST have an explicit action flag from its scoped backend.
 // Mentor keeps its existing behavior; both actions are checked by backend.
+
 const canApproveRequest = (request, isCoordinator) => {
+  const parentStatus = getParentStatus(request);
+
   const eligible =
     normalize(request?.status) === "PENDING" &&
-    ["PENDING", "APPROVED"].includes(getParentStatus(request));
+    ["PENDING", "APPROVED"].includes(parentStatus) &&
+    request?.parentDecision?.callOutcome !== "REJECTED";
+
   if (!eligible) return false;
-  return isCoordinator
-    ? request?.canCurrentFacultyApprove === true
-    : request?.canCurrentFacultyApprove !== false;
+
+  // Coordinator can directly approve requests
+  // within their authorized section.
+  // Backend independently validates academic scope.
+  if (isCoordinator) {
+    return true;
+  }
+
+  // Mentor must be authorized for this request.
+  return request?.canCurrentFacultyApprove !== false;
 };
 
 const unwrapList = (response) => {
@@ -202,6 +214,9 @@ function ActionModal({
   const parentStatus = getParentStatus(request);
   const allowed = canApproveRequest(request, isCoordinator);
 
+  const requiresApprovalReason =
+    approving && (parentStatus === "PENDING" || isCoordinator);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
@@ -304,6 +319,56 @@ function ActionModal({
             </div>
           )}
 
+          {/* FACULTY APPROVAL / PARENT BYPASS REASON */}
+          {approving && (
+            <div className="space-y-2">
+              <label
+                htmlFor="faculty-approval-remark"
+                className="block text-sm font-semibold text-slate-800"
+              >
+                {parentStatus === "PENDING"
+                  ? "Faculty-Authorized Parent Bypass Reason *"
+                  : isCoordinator
+                    ? "Direct Approval Reason *"
+                    : "Approval Remark (Optional)"}
+              </label>
+
+              <textarea
+                id="faculty-approval-remark"
+                value={remark}
+                onChange={(event) => setRemark(event.target.value)}
+                disabled={loading}
+                rows={4}
+                maxLength={500}
+                placeholder={
+                  parentStatus === "PENDING"
+                    ? "Explain why you are authorizing this outpass while parent consent is pending..."
+                    : "Enter your approval remarks..."
+                }
+                className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500"
+              />
+
+              {parentStatus === "PENDING" && (
+                <p className="text-xs leading-5 text-amber-700">
+                  Parent consent remains PENDING. Your decision will be recorded
+                  as a faculty-authorized parent bypass, not parent approval.
+                </p>
+              )}
+
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-slate-500">
+                  {requiresApprovalReason
+                    ? "Minimum 10 characters required."
+                    : "Optional approval remark."}
+                </p>
+
+                <p className="text-xs text-slate-400">
+                  {remark.trim().length}/500
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <button
               type="button"
@@ -319,6 +384,7 @@ function ActionModal({
               disabled={
                 loading ||
                 (approving && !allowed) ||
+                (requiresApprovalReason && remark.trim().length < 10) ||
                 (!approving && (isCoordinator || !remark.trim()))
               }
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -483,6 +549,25 @@ export default function PendingOutpasses() {
       return;
     }
     if (isCoordinator && selectedAction === "reject") return;
+
+    if (selectedAction === "approve") {
+      const parentStatus = getParentStatus(selectedRequest);
+
+      const requiresReason = parentStatus === "PENDING" || isCoordinator;
+
+      if (requiresReason && remark.trim().length < 10) {
+        toast.error(
+          "Please enter an approval/bypass reason of at least 10 characters.",
+        );
+        return;
+      }
+
+      if (remark.trim().length > 500) {
+        toast.error("Approval reason cannot exceed 500 characters.");
+        return;
+      }
+    }
+
     if (selectedAction === "reject" && !remark.trim()) {
       toast.error("Rejection remark is required.");
       return;
