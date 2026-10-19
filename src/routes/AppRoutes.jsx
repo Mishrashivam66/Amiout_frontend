@@ -17,8 +17,9 @@ import SecurityProfile from "../pages/Security/pages/SecurityProfile";
 // HOD & HOI MODULES
 // ==========================================
 
-import HODDashboard from "../modules/hod/pages/HODDashboard";
-import HOIDashboard from "../modules/hoi/pages/HOIDashboard";
+import HODRoutes from "../modules/hod/routes/hodRoutes";
+import HOIRoutes from "../modules/hoi/routes/hoiRoutes";
+
 // ==========================================
 // COMMON AUTH
 // ==========================================
@@ -186,35 +187,13 @@ const AppRoutes = () => {
       {/* ==========================================
     HOD DASHBOARD
 ========================================== */}
-      <Route path="/hod" element={<Navigate to="/hod/dashboard" replace />} />
-      <Route
-        path="/hod/dashboard"
-        element={
-          <ProtectedRoute roles={["HOD"]}>
-            <HODDashboard />
-          </ProtectedRoute>
-        }
-      />
-      {/* ====================================
-          HOI DASHBOARD
-      ==================================== */}
-      {/* ==========================================
-    HOI DASHBOARD
-========================================== */}
-      <Route path="/hoi" element={<Navigate to="/hoi/dashboard" replace />} />
-      <Route
-        path="/hoi/dashboard"
-        element={
-          <ProtectedRoute roles={["HOI"]}>
-            <HOIDashboard />
-          </ProtectedRoute>
-        }
-      />
+      {/* HOD MODULE */}
+      {HODRoutes}
+      {/* HOI MODULE */}
+      {HOIRoutes}
       {/* ====================================
           SECURITY DASHBOARD
       ==================================== */}
-      // ========================================== // SECURITY MODULE -
-      PROTECTED NESTED ROUTES // ==========================================
       <Route
         path="/security"
         element={
