@@ -12,7 +12,7 @@ import SecurityDashboard from "../pages/Security/SecurityDashboard";
 import SecurityLayout from "../pages/Security/components/SecurityLayout";
 import GateHistory from "../pages/Security/pages/GateHistory";
 import SecurityProfile from "../pages/Security/pages/SecurityProfile";
-
+import SuperAdminRoutes from "../modules/superAdmin/routes/superAdminRoutes";
 // ==========================================
 // HOD & HOI MODULES
 // ==========================================
@@ -217,14 +217,8 @@ const AppRoutes = () => {
       {/* ====================================
           SUPER ADMIN DASHBOARD
       ==================================== */}
-      <Route
-        path="/super-admin/dashboard"
-        element={
-          <ProtectedRoute roles={["SUPER_ADMIN"]}>
-            <ComingSoon />
-          </ProtectedRoute>
-        }
-      />
+      {/* SUPER ADMIN MODULE */}
+      {SuperAdminRoutes}
       {/* ====================================
           OTHER ROUTES
       ==================================== */}

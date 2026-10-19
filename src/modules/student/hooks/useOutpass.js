@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 
 import outpassService from "../services/outpassService";
 
@@ -8,9 +8,9 @@ import outpassService from "../services/outpassService";
 // ============================================================
 
 const unwrapResponse = (response) => {
-  // Supports both:
-  // axios response: { data: { success, data } }
-  // service result: { success, data }
+  // Axios: { data: { success, data } }
+  // Service: { success, data }
+
   if (
     response &&
     typeof response === "object" &&
@@ -30,7 +30,11 @@ const getErrorMessage = (error, fallback = "Something went wrong.") => {
   const errors = serverData?.errors || error?.errors;
 
   if (Array.isArray(errors) && errors.length) {
-    return errors.join(", ");
+    return errors
+      .map((item) =>
+        typeof item === "string" ? item : item?.message || "Validation failed.",
+      )
+      .join(", ");
   }
 
   return serverData?.message || error?.message || fallback;
@@ -46,7 +50,13 @@ const requireSuccessfulResponse = (response, fallback) => {
         fallback,
     );
 
+    // Preserve backend error codes for
+    // ApplyOutpass.jsx daily limit detection.
+    error.code = result?.code;
     error.errors = result?.errors;
+    error.response = {
+      data: result || {},
+    };
 
     throw error;
   }
@@ -55,11 +65,12 @@ const requireSuccessfulResponse = (response, fallback) => {
 };
 
 // ============================================================
-// CUSTOM HOOK
+// CUSTOM OUTPASS HOOK
 // ============================================================
 
 const useOutpass = () => {
   const [loading, setLoading] = useState(false);
+
   const pendingRequests = useRef(0);
 
   const beginRequest = useCallback(() => {
@@ -77,6 +88,12 @@ const useOutpass = () => {
 
   // ==========================================================
   // APPLY OUTPASS
+  //
+  // IMPORTANT:
+  // Do not show toast here.
+  // ApplyOutpass.jsx handles success and error toast.
+  //
+  // Preserve backend daily-limit errors.
   // ==========================================================
 
   const submitOutpass = useCallback(
@@ -84,9 +101,8 @@ const useOutpass = () => {
       beginRequest();
 
       try {
-        // Send only direct-apply fields.
         // Student, parent and mentor details
-        // are resolved from StudentMaster.
+        // are resolved by the existing backend.
         const requestData = {
           reason: String(payload?.reason || "").trim(),
           destination: String(payload?.destination || "").trim(),
@@ -101,12 +117,6 @@ const useOutpass = () => {
           response,
           "Unable to submit outpass request.",
         );
-      } catch (error) {
-        console.error("Submit Outpass Error:", error);
-
-        // ApplyOutpass.jsx handles the SweetAlert.
-        // Avoid duplicate error toast.
-        throw error;
       } finally {
         finishRequest();
       }
@@ -124,8 +134,6 @@ const useOutpass = () => {
     try {
       const response = await outpassService.getActiveOutpass();
 
-      // An empty active outpass may be a valid result.
-      // Only explicitly reported failure is rejected.
       const result = unwrapResponse(response);
 
       if (result?.success === false) {
@@ -134,7 +142,9 @@ const useOutpass = () => {
 
       return result;
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to fetch active outpass."));
+      toast.error(getErrorMessage(error, "Failed to fetch active outpass."), {
+        duration: 1000,
+      });
 
       throw error;
     } finally {
@@ -161,7 +171,10 @@ const useOutpass = () => {
 
         return result;
       } catch (error) {
-        toast.error(getErrorMessage(error, "Failed to fetch outpass history."));
+        toast.error(
+          getErrorMessage(error, "Failed to fetch outpass history."),
+          { duration: 1000 },
+        );
 
         throw error;
       } finally {
@@ -190,7 +203,10 @@ const useOutpass = () => {
 
         return result;
       } catch (error) {
-        toast.error(getErrorMessage(error, "Failed to fetch outpass details."));
+        toast.error(
+          getErrorMessage(error, "Failed to fetch outpass details."),
+          { duration: 1000 },
+        );
 
         throw error;
       } finally {
@@ -216,11 +232,15 @@ const useOutpass = () => {
           "Unable to cancel outpass.",
         );
 
-        toast.success(result.message || "Outpass cancelled successfully.");
+        toast.success(result.message || "Outpass cancelled successfully.", {
+          duration: 1000,
+        });
 
         return result;
       } catch (error) {
-        toast.error(getErrorMessage(error, "Failed to cancel outpass."));
+        toast.error(getErrorMessage(error, "Failed to cancel outpass."), {
+          duration: 1000,
+        });
 
         throw error;
       } finally {
