@@ -66,6 +66,24 @@ const hodNavigation = [
   },
 ];
 
+const hoiNavigation = [
+  {
+    label: "Institute Students",
+    icon: Users,
+    suffix: "students",
+  },
+  {
+    label: "Faculty Availability",
+    icon: UserRoundCheck,
+    suffix: "faculty-availability",
+  },
+  {
+    label: "My Profile",
+    icon: UserRound,
+    suffix: "profile",
+  },
+];
+
 export default function AuthoritySidebar({
   role = "HOD",
   isOpen = false,
@@ -80,12 +98,15 @@ export default function AuthoritySidebar({
   const base = isHOI ? "/hoi" : "/hod";
   const RoleIcon = isHOI ? Building2 : GraduationCap;
 
-  const navigation = isHOI
-    ? commonNavigation
-    : [...commonNavigation, ...hodNavigation];
+  const navigation = [
+    ...commonNavigation,
+    ...(isHOI ? hoiNavigation : hodNavigation),
+  ];
 
   return (
     <>
+      {/* MOBILE BACKDROP */}
+
       {isOpen && (
         <button
           type="button"
@@ -94,6 +115,8 @@ export default function AuthoritySidebar({
           className="fixed inset-0 z-40 bg-[#020b18]/75 backdrop-blur-sm lg:hidden"
         />
       )}
+
+      {/* SIDEBAR */}
 
       <aside
         className={`
@@ -110,6 +133,7 @@ export default function AuthoritySidebar({
         `}
       >
         {/* BRAND */}
+
         <div className="flex h-[92px] shrink-0 items-center justify-between border-b border-white/10 px-5">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffd373] to-[#f59e0b] text-[#081629] shadow-lg shadow-amber-500/15">
@@ -135,7 +159,8 @@ export default function AuthoritySidebar({
           </button>
         </div>
 
-        {/* ROLE CARD */}
+        {/* AUTHORITY CARD */}
+
         <div className="shrink-0 px-4 pt-5">
           <div
             className={`flex items-center gap-3 rounded-2xl border border-amber-400/20 bg-gradient-to-r from-amber-400/10 to-white/[0.03] ${
@@ -157,6 +182,7 @@ export default function AuthoritySidebar({
         </div>
 
         {/* NAVIGATION */}
+
         <div className="mt-6 min-h-0 flex-1 overflow-y-auto px-3">
           <p
             className={`mb-3 px-3 text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500 ${
@@ -221,7 +247,8 @@ export default function AuthoritySidebar({
           </nav>
         </div>
 
-        {/* SECURITY & LOGOUT */}
+        {/* FOOTER */}
+
         <div className="shrink-0 space-y-3 border-t border-white/10 px-3 py-4">
           <div
             className={`flex items-center gap-3 rounded-xl bg-white/[0.04] p-3 ${

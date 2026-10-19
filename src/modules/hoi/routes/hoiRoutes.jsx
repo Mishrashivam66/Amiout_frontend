@@ -1,13 +1,21 @@
-import { Route, Navigate, Outlet } from "react-router-dom";
+import { Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "../../../routes/ProtectedRoute";
 
-import HOIDashboard from "../pages/HOIDashboard";
+import AuthorityLayout from "../../facultyAuthority/components/AuthorityLayout";
 
 import AuthorityDashboard from "../../facultyAuthority/components/AuthorityDashboard";
 
+import HOIDashboard from "../pages/HOIDashboard";
+
+import InstituteStudents from "../pages/InstituteStudents";
+
+import FacultyAvailability from "../pages/FacultyAvailability.jsx";
+
+import HOIProfile from "../pages/Profile";
+
 // ============================================================
-// AMIOUT ENTERPRISE - HOI ROUTES
+// AMIOUT ENTERPRISE - HOI PROTECTED ROUTES
 // ============================================================
 
 const HOIRoutes = (
@@ -15,7 +23,7 @@ const HOIRoutes = (
     path="/hoi"
     element={
       <ProtectedRoute roles={["HOI"]}>
-        <Outlet />
+        <AuthorityLayout role="HOI" />
       </ProtectedRoute>
     }
   >
@@ -42,6 +50,12 @@ const HOIRoutes = (
       path="rejected"
       element={<AuthorityDashboard role="HOI" initialStatus="REJECTED" />}
     />
+
+    <Route path="students" element={<InstituteStudents />} />
+
+    <Route path="faculty-availability" element={<FacultyAvailability />} />
+
+    <Route path="profile" element={<HOIProfile />} />
   </Route>
 );
 

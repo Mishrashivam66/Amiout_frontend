@@ -11,15 +11,19 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const pageNames = {
-  dashboard: "Dashboard",
-  outpasses: "All Outpasses",
-  pending: "Pending Approvals",
-  approved: "Approved Outpasses",
-  rejected: "Rejected Outpasses",
-  students: "Department Students",
-  "faculty-availability": "Faculty Availability",
-  profile: "My Profile",
+const getPageName = (segment, isHOI) => {
+  const pages = {
+    dashboard: "Dashboard",
+    outpasses: "All Outpasses",
+    pending: "Pending Approvals",
+    approved: "Approved Outpasses",
+    rejected: "Rejected Outpasses",
+    students: isHOI ? "Institute Students" : "Department Students",
+    "faculty-availability": "Faculty Availability",
+    profile: "My Profile",
+  };
+
+  return pages[segment] || "Dashboard";
 };
 
 export default function AuthorityNavbar({
@@ -36,7 +40,7 @@ export default function AuthorityNavbar({
   const segment =
     location.pathname.split("/").filter(Boolean)[1] || "dashboard";
 
-  const pageTitle = pageNames[segment] || "Dashboard";
+  const pageTitle = getPageName(segment, isHOI);
 
   const currentDate = new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -49,6 +53,7 @@ export default function AuthorityNavbar({
     <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
       <div className="flex min-h-[82px] items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
         {/* LEFT */}
+
         <div className="flex min-w-0 items-center gap-3.5">
           <button
             type="button"
@@ -77,6 +82,7 @@ export default function AuthorityNavbar({
         </div>
 
         {/* RIGHT */}
+
         <div className="flex shrink-0 items-center gap-2.5">
           <div className="hidden flex-col text-right xl:flex">
             <span className="text-xs font-bold text-slate-700">
