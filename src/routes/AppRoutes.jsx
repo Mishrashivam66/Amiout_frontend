@@ -8,6 +8,11 @@ import LandingPage from "../modules/auth/pages/LandingPage";
 import ComingSoon from "../components/common/ComingSoon";
 import ActivateAccount from "../modules/auth/pages/ActivateAccount";
 import SecurityDashboard from "../pages/Security/SecurityDashboard";
+
+import SecurityLayout from "../pages/Security/components/SecurityLayout";
+import GateHistory from "../pages/Security/pages/GateHistory";
+import SecurityProfile from "../pages/Security/pages/SecurityProfile";
+
 // ==========================================
 // HOD & HOI MODULES
 // ==========================================
@@ -75,80 +80,57 @@ const AppRoutes = () => {
       {/* ====================================
           PUBLIC ROUTES
       ==================================== */}
-
       <Route path="/" element={<LandingPage />} />
-
       <Route path="/login" element={<Login />} />
-
       <Route path="/activate-account" element={<ActivateAccount />} />
       <Route path="/parent/review/:token" element={<ParentReview />} />
-
       {/* ====================================
           LEGACY LOGIN REDIRECTS
       ==================================== */}
-
       <Route path="/mentor/login" element={<Navigate to="/login" replace />} />
-
       <Route path="/admin/login" element={<Navigate to="/login" replace />} />
-
       {/* ====================================
           DISABLE PUBLIC REGISTRATION
       ==================================== */}
-
       <Route path="/register" element={<Navigate to="/login" replace />} />
-
       <Route
         path="/student/register"
         element={<Navigate to="/login" replace />}
       />
-
       <Route
         path="/mentor/register"
         element={<Navigate to="/login" replace />}
       />
-
       <Route
         path="/admin/register"
         element={<Navigate to="/login" replace />}
       />
-
       {/* ====================================
           EMAIL OTP
       ==================================== */}
-
       <Route path="/verify-otp" element={<VerifyOTP />} />
-
       {/* ====================================
           COMMON PASSWORD RECOVERY
       ==================================== */}
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
-
       <Route path="/verify-reset-otp" element={<VerifyResetOTP />} />
-
       <Route path="/reset-password" element={<ResetPassword />} />
-
       {/* ====================================
           LEGACY MENTOR PASSWORD RESET
       ==================================== */}
-
       <Route
         path="/mentor/forgot-password"
         element={<MentorForgotPassword />}
       />
-
       <Route
         path="/mentor/verify-reset-otp"
         element={<MentorVerifyResetOTP />}
       />
-
       <Route path="/mentor/reset-password" element={<MentorResetPassword />} />
-
       {/* ====================================
           MANDATORY FIRST-LOGIN
           PASSWORD CHANGE
       ==================================== */}
-
       <Route
         path="/change-password"
         element={
@@ -157,11 +139,9 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
       {/* ====================================
           ADMIN PROTECTED ROUTES
       ==================================== */}
-
       <Route
         path="/admin"
         element={
@@ -189,33 +169,24 @@ const AppRoutes = () => {
         <Route path="notifications" element={<Notifications />} />
         <Route path="security-guards" element={<SecurityGuards />} />
       </Route>
-
       {/* ====================================
           EXISTING MENTOR ROUTES
       ==================================== */}
-
       {MentorRoutes}
-
       {/* ====================================
           EXISTING STUDENT ROUTES
       ==================================== */}
-
       {StudentRoutes}
-
       {/* ====================================
           COORDINATOR DASHBOARD
       ==================================== */}
-
       {/* ====================================
           HOD DASHBOARD
       ==================================== */}
-
       {/* ==========================================
     HOD DASHBOARD
 ========================================== */}
-
       <Route path="/hod" element={<Navigate to="/hod/dashboard" replace />} />
-
       <Route
         path="/hod/dashboard"
         element={
@@ -224,17 +195,13 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
       {/* ====================================
           HOI DASHBOARD
       ==================================== */}
-
       {/* ==========================================
     HOI DASHBOARD
 ========================================== */}
-
       <Route path="/hoi" element={<Navigate to="/hoi/dashboard" replace />} />
-
       <Route
         path="/hoi/dashboard"
         element={
@@ -243,24 +210,34 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
       {/* ====================================
           SECURITY DASHBOARD
       ==================================== */}
-
+      // ========================================== // SECURITY MODULE -
+      PROTECTED NESTED ROUTES // ==========================================
       <Route
-        path="/security/dashboard"
+        path="/security"
         element={
           <ProtectedRoute roles={["SECURITY"]}>
-            <SecurityDashboard />
+            <SecurityLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        {/* Default Security Route */}
+        <Route index element={<Navigate to="dashboard" replace />} />
 
+        {/* QR Scanner and Verification */}
+        <Route path="dashboard" element={<SecurityDashboard />} />
+
+        {/* EXIT / ENTRY History */}
+        <Route path="history" element={<GateHistory />} />
+
+        {/* Security Guard Profile */}
+        <Route path="profile" element={<SecurityProfile />} />
+      </Route>
       {/* ====================================
           SUPER ADMIN DASHBOARD
       ==================================== */}
-
       <Route
         path="/super-admin/dashboard"
         element={
@@ -269,17 +246,13 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-
       {/* ====================================
           OTHER ROUTES
       ==================================== */}
-
       <Route path="/terms" element={<ComingSoon />} />
-
       {/* ====================================
           UNKNOWN ROUTES
       ==================================== */}
-
       <Route path="*" element={<ComingSoon />} />
     </Routes>
   );

@@ -138,7 +138,10 @@ function consentMethod(value) {
 // ============================================================
 
 function normalizeOutpass(raw) {
-  const data = raw?.outpass ?? raw ?? {};
+  const data = {
+    ...(raw || {}),
+    ...(raw?.outpass && typeof raw.outpass === "object" ? raw.outpass : {}),
+  };
 
   const student =
     data.student && typeof data.student === "object" ? data.student : {};
@@ -182,7 +185,21 @@ function normalizeOutpass(raw) {
 
     parentMobile: first(parent.mobileNumber, data.parentMobileNumber),
 
-    parentStatus: first(decision.status, data.parentApprovalStatus, "PENDING"),
+    parentStatus: first(
+      decision.status,
+      data.parentStatus,
+      data.parentApprovalStatus,
+      "PENDING",
+    ),
+
+    parentAuthorizationType: first(
+      data.parentAuthorizationType,
+      data.authorizationType,
+    ),
+
+    verificationMode: data.verificationMode,
+
+    requiresConfirmation: data.requiresConfirmation === true,
 
     parentMethod: decision.method,
 
@@ -476,7 +493,16 @@ export default function SecurityDashboard() {
         return;
       }
 
-      setDetails(normalizeOutpass(response.data?.data));
+      const preview = normalizeOutpass(response.data?.data);
+
+      if (
+        preview.requiresConfirmation !== true ||
+        preview.verificationMode !== scanMode
+      ) {
+        throw new Error("Valid security preview confirmation is required.");
+      }
+
+      setDetails(preview);
 
       setMessage(
         "QR validated. Review student details, then confirm gate movement.",
@@ -958,6 +984,22 @@ export default function SecurityDashboard() {
                 icon={BadgeCheck}
                 label="Parent Consent Status"
                 value={details.parentStatus}
+              />
+
+              <DetailItem
+                icon={ShieldCheck}
+                label="Outpass Authorization"
+                value={
+                  details.parentAuthorizationType ===
+                  "FACULTY_AUTHORIZED_PARENT_BYPASS"
+                    ? "FACULTY-AUTHORIZED PARENT BYPASS"
+                    : details.parentAuthorizationType === "PARENT_APPROVED"
+                      ? "VERIFIED PARENT CONSENT"
+                      : details.parentAuthorizationType ===
+                          "ORIGINAL_EXIT_ALREADY_VERIFIED"
+                        ? "ORIGINAL EXIT VERIFIED - RETURN ENTRY"
+                        : "Not available"
+                }
               />
 
               <DetailItem
