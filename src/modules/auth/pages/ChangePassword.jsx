@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -45,6 +44,13 @@ const getPasswordRules = (password) => [
   },
 ];
 
+const showError = (message) => {
+  toast.error(message, {
+    duration: 5000,
+    position: "top-center",
+  });
+};
+
 const getErrorMessage = (error) =>
   error?.response?.data?.message ||
   error?.response?.data?.error?.message ||
@@ -52,7 +58,7 @@ const getErrorMessage = (error) =>
   "Unable to change password. Please try again.";
 
 // ==========================================
-// PASSWORD INPUT
+// PASSWORD FIELD
 // ==========================================
 
 const PasswordField = ({
@@ -111,8 +117,9 @@ const PasswordField = ({
 // ==========================================
 
 const ChangePassword = () => {
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const submittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
     oldPassword: "",
@@ -164,77 +171,84 @@ const ChangePassword = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (loading || completed) return;
+    if (submittingRef.current || completed) return;
 
     const { oldPassword, newPassword, confirmPassword } = formData;
 
     if (!oldPassword || !newPassword || !confirmPassword) {
-      toast.error("Please fill in all fields.");
+      showError("Please fill in all fields.");
       return;
     }
 
     if (!isStrongPassword) {
-      toast.error("Please choose a stronger password.");
+      showError("Please choose a stronger password.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("New password and confirm password do not match.");
+      showError("New password and confirm password do not match.");
       return;
     }
 
     if (oldPassword === newPassword) {
-      toast.error(
+      showError(
         "Your new password must be different from the current password.",
       );
       return;
     }
 
-    try {
-      setLoading(true);
+    submittingRef.current = true;
+    setLoading(true);
 
+    try {
+      // Existing backend API.
       await changePassword({
         oldPassword,
         newPassword,
         confirmPassword,
       });
+    } catch (error) {
+      showError(getErrorMessage(error));
+      submittingRef.current = false;
+      setLoading(false);
+      return;
+    }
 
-      setCompleted(true);
+    // Password change has succeeded.
+    // Never repeat the API request after this point.
+    setCompleted(true);
 
-      setFormData({
-        oldPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+    setFormData({
+      oldPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
 
+    try {
+      // Backend has invalidated the old sessions.
+      // Do not call the logout API again.
       await logout({
         skipServer: true,
         showToast: false,
-      });
-
-      navigate("/login", {
-        replace: true,
-        state: {
+        redirectState: {
           passwordChanged: true,
         },
       });
     } catch (error) {
-      console.error("Password change failed:", error);
+      console.error("Post-password-change redirect failed:", error);
 
-      toast.error(getErrorMessage(error));
+      showError(
+        "Password updated successfully. Please open the login page and sign in with your new password.",
+      );
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
-  // ========================================
-  // UI
-  // ========================================
-
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030817] px-4 py-10 text-white">
       {/* BACKGROUND */}
-
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-[450px] w-[450px] rounded-full bg-cyan-500/10 blur-[110px]" />
 
@@ -251,7 +265,6 @@ const ChangePassword = () => {
       </div>
 
       {/* MAIN CARD */}
-
       <motion.div
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
@@ -259,7 +272,6 @@ const ChangePassword = () => {
         className="relative z-10 w-full max-w-[510px]"
       >
         {/* BRAND */}
-
         <div className="mb-7 text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/15 bg-white/10 p-3 shadow-xl shadow-cyan-500/10 backdrop-blur-xl">
             <img
@@ -280,7 +292,6 @@ const ChangePassword = () => {
         </div>
 
         {/* PASSWORD CARD */}
-
         <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1427]/90 shadow-2xl shadow-black/40 backdrop-blur-2xl">
           <div className="h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-500" />
 
@@ -302,7 +313,6 @@ const ChangePassword = () => {
             </div>
 
             {/* USER INFORMATION */}
-
             {user?.email && (
               <div className="mb-6 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-4 py-3">
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
@@ -316,7 +326,6 @@ const ChangePassword = () => {
             )}
 
             {/* SECURITY NOTICE */}
-
             <div className="mb-7 flex gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4">
               <ShieldCheck
                 size={19}
@@ -330,7 +339,6 @@ const ChangePassword = () => {
             </div>
 
             {/* FORM */}
-
             <form onSubmit={handleSubmit} className="space-y-5">
               <PasswordField
                 label="Current / Temporary Password"
@@ -356,8 +364,7 @@ const ChangePassword = () => {
                 autoComplete="new-password"
               />
 
-              {/* PASSWORD RULES */}
-
+              {/* PASSWORD REQUIREMENTS */}
               {formData.newPassword.length > 0 && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -460,7 +467,6 @@ const ChangePassword = () => {
             </form>
 
             {/* FOOTER */}
-
             <div className="mt-7 border-t border-white/10 pt-5 text-center">
               <p className="flex items-center justify-center gap-2 text-xs text-slate-500">
                 <ShieldCheck size={14} />

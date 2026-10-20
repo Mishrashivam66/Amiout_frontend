@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+
 import api from "../services/api";
 import {
   createContext,
@@ -8,7 +9,6 @@ import {
   useRef,
   useState,
 } from "react";
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -18,14 +18,10 @@ import {
 } from "../modules/auth/services/auth.service";
 
 // ==========================================
-// AUTH CONTEXT
+// AMIOUT ENTERPRISE - AUTH CONTEXT
 // ==========================================
 
 const AuthContext = createContext(null);
-
-// ==========================================
-// HELPERS
-// ==========================================
 
 const normalizeRole = (role) =>
   String(role || "")
@@ -72,7 +68,6 @@ const normalizeUser = (userData) => {
   }
 
   const assignedRoles = getUserRoles(userData);
-
   const selectedRole = normalizeRole(userData.role);
 
   if (!selectedRole || !assignedRoles.includes(selectedRole)) {
@@ -81,10 +76,8 @@ const normalizeUser = (userData) => {
 
   return {
     ...userData,
-
     role: selectedRole,
     roles: assignedRoles,
-
     mustChangePassword: userData.mustChangePassword === true,
   };
 };
@@ -103,9 +96,6 @@ export const AuthProvider = ({ children }) => {
   const [activeRole, setActiveRole] = useState(getStoredRole);
 
   const [loading, setLoading] = useState(true);
-
-  // Prevent an in-flight /me response
-  // from restoring a session after logout.
 
   const sessionVersionRef = useRef(0);
 
@@ -148,16 +138,14 @@ export const AuthProvider = ({ children }) => {
 
     setToken(accessToken);
     setUser(normalizedUser);
-
     setActiveRole(normalizedUser.role);
-
     setLoading(false);
 
     return normalizedUser;
   }, []);
 
   // ========================================
-  // INITIALIZE AUTH
+  // INITIALIZE AUTHENTICATION
   // ========================================
 
   useEffect(() => {
@@ -180,22 +168,13 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // /auth/me is allowed even when
-        // mustChangePassword is true.
-
         const response = await getProfile();
 
         if (!mounted || requestVersion !== sessionVersionRef.current) {
           return;
         }
 
-        const userData = extractUser(response);
-
-        const normalizedUser = normalizeUser(userData);
-
-        // The API interceptor may have
-        // refreshed the access token
-        // while /me was loading.
+        const normalizedUser = normalizeUser(extractUser(response));
 
         const currentToken = localStorage.getItem("accessToken");
 
@@ -210,9 +189,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("activeRole", normalizedUser.role);
 
         setUser(normalizedUser);
-
         setToken(currentToken);
-
         setActiveRole(normalizedUser.role);
       } catch (error) {
         if (!mounted || requestVersion !== sessionVersionRef.current) {
@@ -223,7 +200,10 @@ export const AuthProvider = ({ children }) => {
 
         clearSession();
 
-        toast.error("Session expired. Please login again.");
+        toast.error("Session expired. Please login again.", {
+          duration: 5000,
+          position: "top-center",
+        });
       } finally {
         if (mounted) {
           setLoading(false);
@@ -254,6 +234,7 @@ export const AuthProvider = ({ children }) => {
       setToken(refreshedToken);
 
       const refreshedRole = normalizeRole(event?.detail?.role);
+
       const refreshedRoles = event?.detail?.roles;
 
       if (!refreshedRole || !Array.isArray(refreshedRoles)) {
@@ -283,6 +264,7 @@ export const AuthProvider = ({ children }) => {
       setActiveRole(refreshedRole);
 
       localStorage.setItem("role", refreshedRole);
+
       localStorage.setItem("activeRole", refreshedRole);
     };
 
@@ -293,7 +275,10 @@ export const AuthProvider = ({ children }) => {
         replace: true,
       });
 
-      toast.error("Your session has expired. Please login again.");
+      toast.error("Your session has expired. Please login again.", {
+        duration: 5000,
+        position: "top-center",
+      });
     };
 
     window.addEventListener(
@@ -325,14 +310,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ========================================
-  // SWITCH ROLE
+  // SWITCH FACULTY ROLE
   // ========================================
 
   const switchRole = async (newRole) => {
     const normalizedRole = normalizeRole(newRole);
 
     if (!roles.includes(normalizedRole)) {
-      toast.error("You are not authorized for this role.");
+      toast.error("You are not authorized for this role.", {
+        duration: 5000,
+        position: "top-center",
+      });
+
       return false;
     }
 
@@ -356,15 +345,21 @@ export const AuthProvider = ({ children }) => {
       sessionVersionRef.current += 1;
 
       localStorage.setItem("accessToken", accessToken);
+
       localStorage.setItem("user", JSON.stringify(normalizedUser));
+
       localStorage.setItem("role", normalizedUser.role);
+
       localStorage.setItem("activeRole", normalizedUser.role);
 
       setToken(accessToken);
       setUser(normalizedUser);
       setActiveRole(normalizedUser.role);
 
-      toast.success(`Switched to ${normalizedRole}`);
+      toast.success(`Switched to ${normalizedRole}`, {
+        duration: 2000,
+        position: "top-center",
+      });
 
       navigate(
         {
@@ -380,6 +375,10 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Unable to switch faculty role.",
+        {
+          duration: 5000,
+          position: "top-center",
+        },
       );
 
       return false;
@@ -391,16 +390,11 @@ export const AuthProvider = ({ children }) => {
   // ========================================
 
   const logout = async (options = {}) => {
-    const { skipServer = false, showToast = true } = options;
-
-    // Revoke the refresh session
-    // before removing the access token.
-    //
-    // skipServer is useful immediately
-    // after a successful password change,
-    // because the backend has already
-    // revoked sessions and cleared
-    // the refresh cookie.
+    const {
+      skipServer = false,
+      showToast = true,
+      redirectState = null,
+    } = options;
 
     if (!skipServer) {
       try {
@@ -414,10 +408,14 @@ export const AuthProvider = ({ children }) => {
 
     navigate("/login", {
       replace: true,
+      state: redirectState,
     });
 
     if (showToast) {
-      toast.success("Logged out successfully.");
+      toast.success("Logged out successfully.", {
+        duration: 2000,
+        position: "top-center",
+      });
     }
   };
 
@@ -426,9 +424,7 @@ export const AuthProvider = ({ children }) => {
   // ========================================
 
   const updateUser = (userData) => {
-    if (!userData) {
-      return;
-    }
+    if (!userData) return;
 
     const mergedUser = {
       ...(user || {}),
@@ -438,7 +434,6 @@ export const AuthProvider = ({ children }) => {
     const normalizedUser = normalizeUser(mergedUser);
 
     setUser(normalizedUser);
-
     setActiveRole(normalizedUser.role);
 
     localStorage.setItem("user", JSON.stringify(normalizedUser));
@@ -458,20 +453,15 @@ export const AuthProvider = ({ children }) => {
         user,
         token,
         loading,
-
         roles,
         activeRole,
-
         login,
         logout,
         clearSession,
         updateUser,
         switchRole,
-
         mustChangePassword: user?.mustChangePassword === true,
-
         isAuthenticated: Boolean(token && user),
-
         hasRole: (role) => roles.includes(normalizeRole(role)),
       }}
     >
@@ -479,9 +469,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-// ==========================================
-// AUTH HOOK
-// ==========================================
 
 export const useAuth = () => useContext(AuthContext);

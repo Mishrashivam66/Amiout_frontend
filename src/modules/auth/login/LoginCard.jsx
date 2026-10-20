@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Mail,
@@ -10,7 +10,6 @@ import {
   LoaderCircle,
   ShieldCheck,
 } from "lucide-react";
-
 import { toast } from "sonner";
 
 import campusLogo from "../../../assets/Campus Logo.png";
@@ -18,7 +17,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { login as loginService } from "../services/auth.service";
 
 // ==========================================
-// AMIOUT ENTERPRISE - ROLE DASHBOARD ROUTES
+// DASHBOARD ROUTES
 // ==========================================
 
 const DASHBOARD_ROUTES = {
@@ -33,7 +32,7 @@ const DASHBOARD_ROUTES = {
 };
 
 // ==========================================
-// TOAST HELPERS
+// NOTIFICATION HELPERS
 // ==========================================
 
 const showSuccess = (message) => {
@@ -50,43 +49,25 @@ const showError = (message) => {
   });
 };
 
-const showInfo = (message) => {
-  toast.info(message, {
-    duration: 4000,
-    position: "top-center",
-  });
-};
-
-// ==========================================
-// SAFE LOGIN ERROR MESSAGES
-// ==========================================
-
 const getLoginErrorMessage = (error) => {
   const status = error?.response?.status;
 
   const serverMessage = String(error?.response?.data?.message || "");
 
-  // Invalid credentials
-  if (status === 401) {
+  if (status === 401 || status === 404) {
     return "Invalid email or password. Please check your credentials and try again.";
   }
 
-  // Account not found
-  if (status === 404) {
-    return "Invalid email or password. Please check your credentials and try again.";
-  }
-
-  // Account disabled or restricted
-  if (status === 403) {
-    return "Your account is inactive or restricted. Please contact the administrator.";
-  }
-
-  // Too many attempts
   if (status === 429) {
     return "Too many login attempts. Please try again later.";
   }
 
-  // Backend explicitly reports invalid credentials
+  if (status === 403) {
+    return /inactive|disabled|suspend|blocked/i.test(serverMessage)
+      ? "Your account is inactive or restricted. Please contact the administrator."
+      : "Access denied. Please contact the administrator.";
+  }
+
   if (
     /invalid credentials|incorrect password|wrong password|invalid email or password/i.test(
       serverMessage,
@@ -95,12 +76,10 @@ const getLoginErrorMessage = (error) => {
     return "Invalid email or password. Please check your credentials and try again.";
   }
 
-  // Server errors
   if (status >= 500) {
     return "Login service is temporarily unavailable. Please try again later.";
   }
 
-  // Network errors
   if (!error?.response && error?.request) {
     return "Unable to connect to the server. Please check your internet connection.";
   }
@@ -116,6 +95,7 @@ const getLoginErrorMessage = (error) => {
 
 const LoginCard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const submittingRef = useRef(false);
@@ -130,7 +110,33 @@ const LoginCard = () => {
   });
 
   // ========================================
-  // INPUT HANDLER
+  // PASSWORD CHANGE SUCCESS NOTIFICATION
+  // ========================================
+
+  useEffect(() => {
+    if (!location.state?.passwordChanged) {
+      return;
+    }
+
+    toast.success(
+      "Password updated successfully! Please sign in with your new password.",
+      {
+        id: "amiout-password-updated",
+        duration: 3000,
+        position: "top-center",
+      },
+    );
+
+    // Clear navigation state to avoid
+    // showing the same message again.
+    navigate(location.pathname, {
+      replace: true,
+      state: null,
+    });
+  }, [location.pathname, location.state, navigate]);
+
+  // ========================================
+  // INPUT CHANGE
   // ========================================
 
   const handleChange = (event) => {
@@ -152,6 +158,7 @@ const LoginCard = () => {
     if (submittingRef.current) return;
 
     const email = formData.email.trim().toLowerCase();
+
     const password = formData.password;
 
     if (!email && !password) {
@@ -178,7 +185,6 @@ const LoginCard = () => {
     setLoading(true);
 
     try {
-      // Existing common authentication API.
       const response = await loginService({
         email,
         password,
@@ -190,10 +196,7 @@ const LoginCard = () => {
 
       const user = response.user;
 
-      // ====================================
-      // RESOLVE AUTHORIZED ROLES
-      // ====================================
-
+      // Resolve available roles.
       const assignedRoles = [
         ...new Set(
           [...(Array.isArray(user.roles) ? user.roles : []), user.role]
@@ -227,20 +230,15 @@ const LoginCard = () => {
           user.mustChangePassword === true,
       };
 
-      // ====================================
-      // SAVE AUTHENTICATED SESSION
-      // ====================================
-
+      // Save existing authenticated session.
       login(normalizedUser, response.accessToken);
 
-      // ====================================
-      // FIRST LOGIN PASSWORD CHANGE
-      // ====================================
-
+      // First login password change.
       if (normalizedUser.mustChangePassword) {
-        showInfo(
-          "Login successful. Please change your temporary password to continue.",
-        );
+        toast.info("Please change your temporary password to continue.", {
+          duration: 4000,
+          position: "top-center",
+        });
 
         navigate("/change-password", {
           replace: true,
@@ -248,10 +246,6 @@ const LoginCard = () => {
 
         return;
       }
-
-      // ====================================
-      // SUCCESSFUL LOGIN
-      // ====================================
 
       showSuccess("Login successful! Welcome back.");
 
@@ -267,21 +261,18 @@ const LoginCard = () => {
   };
 
   // ==========================================
-  // LOGIN CARD UI
+  // LOGIN UI
   // ==========================================
 
   return (
     <div className="relative w-full overflow-hidden rounded-[28px] bg-[#061225]/90 px-5 py-7 text-white backdrop-blur-2xl sm:px-9 sm:py-9">
-      {/* BACKGROUND EFFECTS */}
+      {/* BACKGROUND GLOWS */}
       <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-cyan-500/10 blur-[90px]" />
 
       <div className="pointer-events-none absolute -bottom-24 -right-20 h-60 w-60 rounded-full bg-violet-600/15 blur-[90px]" />
 
       <div className="relative z-10">
-        {/* ====================================
-            UNIVERSITY BRANDING
-        ==================================== */}
-
+        {/* LOGO */}
         <div className="mb-6 flex flex-col items-center text-center">
           <img
             src={campusLogo}
@@ -296,10 +287,7 @@ const LoginCard = () => {
           </p>
         </div>
 
-        {/* ====================================
-            WELCOME SECTION
-        ==================================== */}
-
+        {/* WELCOME */}
         <div className="mb-7 text-center">
           <h3 className="text-2xl font-extrabold sm:text-[28px]">
             Welcome Back
@@ -310,12 +298,9 @@ const LoginCard = () => {
           </p>
         </div>
 
-        {/* ====================================
-            LOGIN FORM
-        ==================================== */}
-
+        {/* LOGIN FORM */}
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
-          {/* EMAIL ADDRESS */}
+          {/* EMAIL */}
           <div>
             <label
               htmlFor="login-email"
@@ -324,7 +309,7 @@ const LoginCard = () => {
               University Email Address
             </label>
 
-            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all duration-200 focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
               <Mail className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
 
               <input
@@ -356,13 +341,13 @@ const LoginCard = () => {
 
               <Link
                 to="/forgot-password"
-                className="text-xs font-semibold text-cyan-400 transition hover:text-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400"
+                className="text-xs font-semibold text-cyan-400 transition hover:text-cyan-300"
               >
                 Forgot Password?
               </Link>
             </div>
 
-            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all duration-200 focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
               <LockKeyhole className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
 
               <input
@@ -381,10 +366,10 @@ const LoginCard = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword((previous) => !previous)}
+                disabled={loading}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                disabled={loading}
-                className="mr-4 rounded-md text-slate-400 transition hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:opacity-50"
+                className="mr-4 text-slate-400 transition hover:text-white disabled:opacity-50"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -409,14 +394,14 @@ const LoginCard = () => {
             <span className="text-sm text-slate-300">Remember me</span>
           </label>
 
-          {/* SIGN IN BUTTON */}
+          {/* SIGN IN */}
           <motion.button
             whileHover={loading ? undefined : { scale: 1.015 }}
             whileTap={loading ? undefined : { scale: 0.985 }}
             type="submit"
             disabled={loading}
             aria-busy={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-blue-500/25 transition-all disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -432,10 +417,7 @@ const LoginCard = () => {
           </motion.button>
         </form>
 
-        {/* ====================================
-            SECURITY FOOTER
-        ==================================== */}
-
+        {/* SECURITY FOOTER */}
         <div className="mt-7 flex items-center justify-center gap-2 border-t border-white/10 pt-5 text-center">
           <ShieldCheck
             className="h-4 w-4 shrink-0 text-emerald-400"
