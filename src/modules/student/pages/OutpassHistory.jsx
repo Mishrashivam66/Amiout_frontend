@@ -20,7 +20,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   X,
-  XCircle,
 } from "lucide-react";
 
 import api from "../../../services/api";

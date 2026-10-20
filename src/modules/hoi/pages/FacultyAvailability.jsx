@@ -38,6 +38,8 @@ import api from "../../../services/api";
 
 const TOAST_DURATION = 1000;
 
+const EMPTY_FACULTY = [];
+
 const getError = (error) =>
   error?.response?.data?.message ||
   error?.message ||
@@ -176,7 +178,7 @@ export default function FacultyAvailability() {
     void loadData();
   }, [loadData]);
 
-  const faculty = data?.faculty || [];
+  const faculty = data?.faculty ?? EMPTY_FACULTY;
   const assignedRequests = data?.assignedRequests || [];
   const stats = data?.stats || {};
 

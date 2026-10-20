@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -43,7 +42,7 @@ const PendingOutpassTable = ({ onRefresh }) => {
   // Load Pending Requests
   // =====================================================
 
-  const loadPendingRequests = async () => {
+  const loadPendingRequests = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -61,16 +60,18 @@ const PendingOutpassTable = ({ onRefresh }) => {
       );
     } catch (error) {
       console.error(error);
-
-      toast.error("Unable to load pending requests.");
+      toast.error("Unable to load pending requests.", {
+        duration: 5000,
+        position: "top-center",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search]);
 
   useEffect(() => {
-    loadPendingRequests();
-  }, [page, search]);
+    void loadPendingRequests();
+  }, [loadPendingRequests]);
 
   // =====================================================
   // Approve

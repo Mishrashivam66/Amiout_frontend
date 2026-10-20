@@ -10,7 +10,6 @@ import {
   Eye,
   GraduationCap,
   Loader2,
-  Mail,
   RefreshCw,
   Search,
   ShieldCheck,

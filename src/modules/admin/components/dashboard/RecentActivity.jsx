@@ -73,9 +73,11 @@ const normalizeStatus = (value) => {
   if (status.includes("APPROV")) return "APPROVED";
   if (status.includes("PENDING")) return "PENDING";
   if (status.includes("REJECT")) return "REJECTED";
+
   if (status.includes("RETURN") || status.includes("COMPLETED")) {
     return "COMPLETED";
   }
+
   if (status.includes("EXIT")) return "EXITED";
 
   return status || "ACTIVITY";
@@ -104,7 +106,11 @@ const statusThemes = {
   },
 };
 
-function ActivityRow({ item, index }) {
+// ============================================================
+// ACTIVITY ROW
+// ============================================================
+
+function ActivityRow({ item }) {
   const student =
     item.studentName ||
     item.student?.name ||
@@ -182,12 +188,20 @@ function ActivityRow({ item, index }) {
   );
 }
 
+// ============================================================
+// RECENT ACTIVITY COMPONENT
+// ============================================================
+
 export default function RecentActivity({ refreshKey = 0 }) {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [manualRefresh, setManualRefresh] = useState(0);
+
+  // ==========================================================
+  // FETCH RECENT ACTIVITIES
+  // ==========================================================
 
   useEffect(() => {
     let active = true;
@@ -232,6 +246,10 @@ export default function RecentActivity({ refreshKey = 0 }) {
     };
   }, [refreshKey, manualRefresh]);
 
+  // ==========================================================
+  // MANUAL REFRESH
+  // ==========================================================
+
   const refresh = () => {
     if (loading || refreshing) return;
 
@@ -239,9 +257,14 @@ export default function RecentActivity({ refreshKey = 0 }) {
     setManualRefresh((value) => value + 1);
 
     toast.success("Refreshing activity", {
-      duration: 1000,
+      duration: 2000,
+      position: "top-center",
     });
   };
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
     <section className="rounded-3xl border border-[#223447] bg-[#122131] p-5 sm:p-7">
@@ -303,11 +326,7 @@ export default function RecentActivity({ refreshKey = 0 }) {
       ) : (
         <div className="space-y-3">
           {activities.slice(0, 8).map((item, index) => (
-            <ActivityRow
-              key={item._id || item.id || index}
-              item={item}
-              index={index}
-            />
+            <ActivityRow key={item._id || item.id || index} item={item} />
           ))}
         </div>
       )}

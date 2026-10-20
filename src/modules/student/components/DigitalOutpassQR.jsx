@@ -333,7 +333,7 @@ export default function DigitalOutpassQR({ outpass }) {
     return () => {
       cancelled = true;
     };
-  }, [outpassId, refreshCount]);
+  }, [outpass, outpassId, refreshCount]);
 
   // ==========================================================
   // CURRENT OUTPASS STATE

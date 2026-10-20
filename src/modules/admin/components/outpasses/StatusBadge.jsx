@@ -1,5 +1,3 @@
-import React from "react";
-
 const colors = {
   PENDING: "bg-yellow-100 text-yellow-700 border-yellow-300",
 

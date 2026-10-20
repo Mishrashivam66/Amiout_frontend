@@ -324,7 +324,10 @@ const ImportHistory = ({ history = [] }) => {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState(null);
 
-  const records = Array.isArray(history) ? history : [];
+  const records = useMemo(
+    () => (Array.isArray(history) ? history : []),
+    [history],
+  );
 
   // ==========================================================
   // SEARCH FILTER
@@ -353,7 +356,7 @@ const ImportHistory = ({ history = [] }) => {
 
       return searchableText.includes(query);
     });
-  }, [history, search]);
+  }, [records, search]);
 
   // ==========================================================
   // UI

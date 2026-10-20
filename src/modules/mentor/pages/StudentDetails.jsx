@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,19 +18,23 @@ const StudentDetails = () => {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadStudent = async () => {
+  const loadStudent = useCallback(async () => {
     try {
+      setLoading(true);
+
       const response = await getStudentDetails(studentId);
       setStudent(response.data);
     } catch (err) {
       console.error(err);
+      setStudent(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
+
   useEffect(() => {
-    loadStudent();
-  }, []);
+    void loadStudent();
+  }, [loadStudent]);
 
   if (loading) {
     return (
@@ -138,19 +142,16 @@ const StudentDetails = () => {
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500">Parent Name</p>
-
               <p className="font-semibold">{student.parentName}</p>
             </div>
 
             <div>
               <p className="text-sm text-slate-500">Parent Email</p>
-
               <p className="font-semibold">{student.parentEmail}</p>
             </div>
 
             <div>
               <p className="text-sm text-slate-500">Parent Mobile</p>
-
               <p className="font-semibold">{student.parentMobileNumber}</p>
             </div>
           </div>

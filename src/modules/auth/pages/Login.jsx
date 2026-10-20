@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import LoginCard from "../login/LoginCard";
 import campusJourney from "../../../assets/campus-journey.webp";
 import campusLogo from "../../../assets/Campus Logo.png";
+
 // ============================================================
 // AMIOUT Enterprise Edition
 // Common Login Page - Centered Cinematic Design
@@ -49,8 +50,6 @@ const Login = () => {
           className="flex items-center justify-between gap-4"
         >
           {/* AMIOUT LOGO */}
-
-          {/* AMIOUT LOGO */}
           <Link to="/" className="flex min-w-0 items-center gap-3">
             <img
               src={campusLogo}
@@ -75,7 +74,9 @@ const Login = () => {
             className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/15 bg-[#0a1630]/70 px-3 py-2.5 text-xs font-medium text-slate-200 backdrop-blur-xl transition-all duration-300 hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-white sm:px-5 sm:text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
+
             <span className="hidden sm:inline">Back to Home</span>
+
             <span className="sm:hidden">Back</span>
           </Link>
         </motion.header>

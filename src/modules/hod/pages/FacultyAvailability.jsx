@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -9,12 +8,8 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowRightLeft,
-  BadgeCheck,
-  Building2,
   CheckCircle2,
   ClipboardList,
-  Clock3,
-  GraduationCap,
   Loader2,
   RefreshCw,
   Search,
@@ -26,7 +21,17 @@ import {
 
 import api from "../../../services/api";
 
-const TOAST_DURATION = 1000;
+// ============================================================
+// AMIOUT Enterprise Edition
+// HOD Faculty Availability & Escalation Monitoring
+// ============================================================
+
+const SUCCESS_TOAST_DURATION = 2000;
+const ERROR_TOAST_DURATION = 5000;
+
+const EMPTY_FACULTY = [];
+const EMPTY_ESCALATIONS = [];
+const EMPTY_STATS = {};
 
 const getError = (error) =>
   error?.response?.data?.message ||
@@ -154,7 +159,8 @@ export default function FacultyAvailability() {
       if (notify) {
         toast.success("Faculty status refreshed", {
           id: "hod-faculty-refresh",
-          duration: TOAST_DURATION,
+          duration: SUCCESS_TOAST_DURATION,
+          position: "top-center",
         });
       }
     } catch (err) {
@@ -169,7 +175,8 @@ export default function FacultyAvailability() {
       if (notify) {
         toast.error(message, {
           id: "hod-faculty-refresh",
-          duration: TOAST_DURATION,
+          duration: ERROR_TOAST_DURATION,
+          position: "top-center",
         });
       }
     } finally {
@@ -188,9 +195,10 @@ export default function FacultyAvailability() {
     };
   }, [loadData]);
 
-  const faculty = data?.faculty || [];
-  const escalations = data?.escalations || [];
-  const stats = data?.stats || {};
+  // Stable fallback references prevent useMemo dependency warnings.
+  const faculty = data?.faculty ?? EMPTY_FACULTY;
+  const escalations = data?.escalations ?? EMPTY_ESCALATIONS;
+  const stats = data?.stats ?? EMPTY_STATS;
 
   // ==========================================================
   // LOCAL SEARCH / STATUS FILTER
@@ -252,10 +260,7 @@ export default function FacultyAvailability() {
 
   return (
     <div className="space-y-7 pb-8">
-      {/* ======================================================
-          HERO
-      ====================================================== */}
-
+      {/* HERO */}
       <section className="relative overflow-hidden rounded-[28px] bg-[#091b31] p-6 text-white shadow-xl shadow-slate-900/10 sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl" />
 
@@ -275,6 +280,7 @@ export default function FacultyAvailability() {
                 <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
                   Faculty Availability
                 </h1>
+
                 <p className="mt-1 text-xs font-bold text-amber-300">
                   Department Authority & Escalation Monitor
                 </p>
@@ -316,10 +322,7 @@ export default function FacultyAvailability() {
         </div>
       </section>
 
-      {/* ======================================================
-          ERROR / LOADING
-      ====================================================== */}
-
+      {/* ERROR / LOADING */}
       {error && (
         <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
           <AlertCircle size={20} className="shrink-0" />
@@ -336,20 +339,14 @@ export default function FacultyAvailability() {
 
       {!loading && data && (
         <>
-          {/* ==================================================
-              STATISTICS
-          ================================================== */}
-
+          {/* STATISTICS */}
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {metrics.map((item) => (
               <MetricCard key={item.title} {...item} />
             ))}
           </section>
 
-          {/* ==================================================
-              REASSIGNMENT WARNING
-          ================================================== */}
-
+          {/* REASSIGNMENT WARNING */}
           {(stats.attentionRequired || 0) > 0 && (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
               <div className="flex items-start gap-3">
@@ -381,10 +378,7 @@ export default function FacultyAvailability() {
             </div>
           )}
 
-          {/* ==================================================
-              FACULTY DIRECTORY
-          ================================================== */}
-
+          {/* FACULTY DIRECTORY */}
           <section className="overflow-hidden rounded-[25px] border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-5 sm:p-6">
               <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
@@ -392,6 +386,7 @@ export default function FacultyAvailability() {
                   <h2 className="text-lg font-black text-[#101e36]">
                     Department Faculty
                   </h2>
+
                   <p className="mt-1 text-xs text-slate-500">
                     Availability is based on saved faculty account status, not
                     login activity.
@@ -404,6 +399,7 @@ export default function FacultyAvailability() {
                       size={18}
                       className="absolute left-3.5 top-3 text-slate-400"
                     />
+
                     <input
                       type="search"
                       value={search}
@@ -444,6 +440,7 @@ export default function FacultyAvailability() {
                         <p className="truncate text-sm font-extrabold text-slate-900">
                           {person.name}
                         </p>
+
                         <p className="mt-1 truncate text-xs text-slate-500">
                           {person.designation || "Faculty"}
                         </p>
@@ -518,9 +515,11 @@ export default function FacultyAvailability() {
               {filteredFaculty.length === 0 && (
                 <div className="col-span-full px-4 py-14 text-center">
                   <Users size={37} className="mx-auto text-slate-300" />
+
                   <h3 className="mt-4 text-sm font-extrabold text-slate-900">
                     No Matching Faculty
                   </h3>
+
                   <p className="mt-2 text-xs text-slate-500">
                     No authorized faculty match the selected filters.
                   </p>
@@ -529,15 +528,13 @@ export default function FacultyAvailability() {
             </div>
           </section>
 
-          {/* ==================================================
-              HOD ASSIGNED / TRANSFERRED REQUESTS
-          ================================================== */}
-
+          {/* HOD ASSIGNED / TRANSFERRED REQUESTS */}
           <section className="overflow-hidden rounded-[25px] border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col justify-between gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:p-6">
               <div>
                 <div className="flex items-center gap-2">
                   <ArrowRightLeft size={20} className="text-amber-600" />
+
                   <h2 className="text-lg font-black text-[#101e36]">
                     HOD Assigned Requests
                   </h2>
@@ -569,6 +566,7 @@ export default function FacultyAvailability() {
                       <p className="text-sm font-extrabold text-slate-900">
                         {item.studentName}
                       </p>
+
                       <p className="mt-1 text-xs text-slate-500">
                         {item.enrollmentNumber} · {item.outpassId}
                       </p>
@@ -593,9 +591,11 @@ export default function FacultyAvailability() {
                         <strong>From:</strong> {item.transfer.fromFacultyName} (
                         {item.transfer.fromRole || "Faculty"})
                       </p>
+
                       <p className="mt-1">
                         <strong>Reason:</strong> {item.transfer.reason || "—"}
                       </p>
+
                       <p className="mt-1">
                         <strong>Transferred:</strong>{" "}
                         {formatDate(item.transfer.transferredAt)}
@@ -613,9 +613,11 @@ export default function FacultyAvailability() {
               {escalations.length === 0 && (
                 <div className="py-12 text-center">
                   <ClipboardList size={36} className="mx-auto text-slate-300" />
+
                   <p className="mt-4 text-sm font-bold text-slate-700">
                     No pending requests assigned to HOD
                   </p>
+
                   <p className="mt-2 text-xs text-slate-500">
                     Escalated requests will appear here when they are actually
                     assigned.
@@ -625,10 +627,7 @@ export default function FacultyAvailability() {
             </div>
           </section>
 
-          {/* ==================================================
-              POLICY NOTE
-          ================================================== */}
-
+          {/* ESCALATION POLICY */}
           <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <ShieldCheck size={23} className="shrink-0 text-amber-700" />
 
@@ -638,11 +637,13 @@ export default function FacultyAvailability() {
               </h3>
 
               <p className="mt-2 text-xs leading-6 text-amber-900">
-                Primary Mentor → authorized Backup Mentor (if available) →
-                Coordinator → HOD → HOI. Faculty unavailability may trigger
-                pending request reassignment. The HOD may also directly approve
-                requests in their authorized department. Direct approval and
-                recorded transfer are different actions.
+                Requests remain assigned to the designated Mentor while
+                available. When the Mentor is unavailable, pending requests are
+                automatically escalated to the Coordinator, then HOD, then HOI,
+                according to authority availability. HOD approval is permitted
+                only when the preceding responsible authorities are unavailable
+                and the request is properly assigned to HOD. All transfers
+                require an audit trail.
               </p>
             </div>
           </div>

@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   UserRound,
   UserRoundX,
-  Users,
 } from "lucide-react";
 
 import api from "../../../services/api";

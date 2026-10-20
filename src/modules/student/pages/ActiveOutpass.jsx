@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   QrCode,
   AlertCircle,
-  ArrowUpRight,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 

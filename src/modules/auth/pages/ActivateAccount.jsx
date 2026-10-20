@@ -6,13 +6,11 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock3,
-  KeyRound,
   Loader2,
   LockKeyhole,
   Mail,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 
 import api from "../../../services/api";

@@ -1,5 +1,3 @@
-import React from "react";
-
 const MentorForm = ({ formData, setFormData, onSubmit, loading, onCancel }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
