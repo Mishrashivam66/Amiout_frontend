@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+/* ==========================================
+   AMIOUT ENTERPRISE - GLOBAL SCROLLBAR
+========================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -15,4 +20,91 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #3b82f6;
+}
+
+/* ==========================================
+   GLOBAL SONNER TOAST DESIGN
+========================================== */
+
+.amiout-sonner-success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.amiout-sonner-error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.amiout-sonner-warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.amiout-sonner-info {
+  border-left: 4px solid #0284c7 !important;
+}
+
+/* ==========================================
+   REACT TOASTIFY DESIGN
+========================================== */
+
+.Toastify__toast-container {
+  z-index: 99999 !important;
+}
+
+.Toastify__toast {
+  border-radius: 14px !important;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.16);
+  overflow-wrap: anywhere;
+}
+
+.Toastify__toast--success {
+  border-left: 4px solid #10b981;
+}
+
+.Toastify__toast--error {
+  border-left: 4px solid #ef4444;
+}
+
+.Toastify__toast--warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.Toastify__toast--info {
+  border-left: 4px solid #0284c7;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVENESS
+========================================== */
+
+@media (max-width: 640px) {
+  .Toastify__toast-container--top-center {
+    top: 16px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 32px) !important;
+    padding: 0 !important;
+  }
+
+  .Toastify__toast {
+    margin-bottom: 10px;
+    border-radius: 14px !important;
+  }
+
+  [data-sonner-toaster] {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* ==========================================
+   ACCESSIBILITY
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

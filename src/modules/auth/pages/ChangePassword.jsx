@@ -207,17 +207,16 @@ const ChangePassword = () => {
         confirmPassword: "",
       });
 
-      toast.success(
-        "Password changed successfully. Please login with your new password.",
-      );
-
-      // Backend invalidates previous sessions
-      // after a successful password change.
-      // Clear frontend authentication too.
-
       await logout({
         skipServer: true,
         showToast: false,
+      });
+
+      navigate("/login", {
+        replace: true,
+        state: {
+          passwordChanged: true,
+        },
       });
     } catch (error) {
       console.error("Password change failed:", error);

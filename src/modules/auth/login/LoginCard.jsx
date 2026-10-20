@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -7,10 +7,8 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  GraduationCap,
-  Users,
-  Building2,
-  ScanLine,
+  LoaderCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -20,7 +18,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { login as loginService } from "../services/auth.service";
 
 // ==========================================
-// ROLE DASHBOARD ROUTES
+// AMIOUT ENTERPRISE - ROLE DASHBOARD ROUTES
 // ==========================================
 
 const DASHBOARD_ROUTES = {
@@ -35,39 +33,92 @@ const DASHBOARD_ROUTES = {
 };
 
 // ==========================================
-// ROLE LABELS
+// TOAST HELPERS
 // ==========================================
 
-const roleItems = [
-  {
-    label: "Student",
-    icon: GraduationCap,
-    color: "text-emerald-400",
-  },
-  {
-    label: "Faculty",
-    icon: Users,
-    color: "text-cyan-400",
-  },
-  {
-    label: "Admin",
-    icon: Building2,
-    color: "text-violet-400",
-  },
-  {
-    label: "Security",
-    icon: ScanLine,
-    color: "text-rose-400",
-  },
-];
+const showSuccess = (message) => {
+  toast.success(message, {
+    duration: 2000,
+    position: "top-center",
+  });
+};
+
+const showError = (message) => {
+  toast.error(message, {
+    duration: 5000,
+    position: "top-center",
+  });
+};
+
+const showInfo = (message) => {
+  toast.info(message, {
+    duration: 4000,
+    position: "top-center",
+  });
+};
 
 // ==========================================
-// LOGIN CARD
+// SAFE LOGIN ERROR MESSAGES
+// ==========================================
+
+const getLoginErrorMessage = (error) => {
+  const status = error?.response?.status;
+
+  const serverMessage = String(error?.response?.data?.message || "");
+
+  // Invalid credentials
+  if (status === 401) {
+    return "Invalid email or password. Please check your credentials and try again.";
+  }
+
+  // Account not found
+  if (status === 404) {
+    return "Invalid email or password. Please check your credentials and try again.";
+  }
+
+  // Account disabled or restricted
+  if (status === 403) {
+    return "Your account is inactive or restricted. Please contact the administrator.";
+  }
+
+  // Too many attempts
+  if (status === 429) {
+    return "Too many login attempts. Please try again later.";
+  }
+
+  // Backend explicitly reports invalid credentials
+  if (
+    /invalid credentials|incorrect password|wrong password|invalid email or password/i.test(
+      serverMessage,
+    )
+  ) {
+    return "Invalid email or password. Please check your credentials and try again.";
+  }
+
+  // Server errors
+  if (status >= 500) {
+    return "Login service is temporarily unavailable. Please try again later.";
+  }
+
+  // Network errors
+  if (!error?.response && error?.request) {
+    return "Unable to connect to the server. Please check your internet connection.";
+  }
+
+  return (
+    serverMessage || error?.message || "Unable to sign in. Please try again."
+  );
+};
+
+// ==========================================
+// AMIOUT ENTERPRISE - LOGIN CARD
 // ==========================================
 
 const LoginCard = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const submittingRef = useRef(false);
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -79,43 +130,62 @@ const LoginCard = () => {
   });
 
   // ========================================
-  // INPUT CHANGE
+  // INPUT HANDLER
   // ========================================
 
-  const handleChange = (e) => {
-    const { name, value, checked, type } = e.target;
+  const handleChange = (event) => {
+    const { name, value, checked, type } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   // ========================================
-  // HANDLE LOGIN
+  // LOGIN SUBMISSION
   // ========================================
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-    if (loading) return;
+    if (submittingRef.current) return;
 
-    if (!formData.email.trim() || !formData.password) {
-      toast.error("Please enter your email and password.");
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+
+    if (!email && !password) {
+      showError("Please enter your university email and password.");
       return;
     }
 
-    try {
-      setLoading(true);
+    if (!email) {
+      showError("Please enter your university email address.");
+      return;
+    }
 
-      // Common backend login for all roles.
+    if (!password) {
+      showError("Please enter your password.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError("Please enter a valid university email address.");
+      return;
+    }
+
+    submittingRef.current = true;
+    setLoading(true);
+
+    try {
+      // Existing common authentication API.
       const response = await loginService({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
+        email,
+        password,
       });
 
       if (!response?.user || !response?.accessToken) {
-        throw new Error("Invalid login response.");
+        throw new Error("Invalid login response. Please try again.");
       }
 
       const user = response.user;
@@ -127,7 +197,7 @@ const LoginCard = () => {
       const assignedRoles = [
         ...new Set(
           [...(Array.isArray(user.roles) ? user.roles : []), user.role]
-            .filter((role) => typeof role === "string")
+            .filter((role) => typeof role === "string" && role.trim())
             .map((role) => role.trim().toUpperCase()),
         ),
       ];
@@ -137,7 +207,7 @@ const LoginCard = () => {
       );
 
       if (!availableRoles.length) {
-        throw new Error("No dashboard assigned to this account.");
+        throw new Error("No authorized dashboard is assigned to this account.");
       }
 
       const preferredRole = String(user.role || "")
@@ -158,10 +228,9 @@ const LoginCard = () => {
       };
 
       // ====================================
-      // SAVE AUTHENTICATED USER
+      // SAVE AUTHENTICATED SESSION
       // ====================================
 
-      // Reuse existing AuthContext.
       login(normalizedUser, response.accessToken);
 
       // ====================================
@@ -169,7 +238,9 @@ const LoginCard = () => {
       // ====================================
 
       if (normalizedUser.mustChangePassword) {
-        toast.info("Please change your temporary password to continue.");
+        showInfo(
+          "Login successful. Please change your temporary password to continue.",
+        );
 
         navigate("/change-password", {
           replace: true,
@@ -179,34 +250,39 @@ const LoginCard = () => {
       }
 
       // ====================================
-      // NORMAL DASHBOARD REDIRECT
+      // SUCCESSFUL LOGIN
       // ====================================
 
-      toast.success(response.message || "Login successful!");
+      showSuccess("Login successful! Welcome back.");
 
       navigate(DASHBOARD_ROUTES[primaryRole], {
         replace: true,
       });
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to sign in. Please try again.",
-      );
+      showError(getLoginErrorMessage(error));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
 
+  // ==========================================
+  // LOGIN CARD UI
+  // ==========================================
+
   return (
-    <div className="relative w-full overflow-hidden rounded-[28px] bg-[#061225]/90 px-5 py-6 text-white backdrop-blur-2xl sm:px-9 sm:py-8">
-      {/* Background Glows */}
+    <div className="relative w-full overflow-hidden rounded-[28px] bg-[#061225]/90 px-5 py-7 text-white backdrop-blur-2xl sm:px-9 sm:py-9">
+      {/* BACKGROUND EFFECTS */}
       <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-cyan-500/10 blur-[90px]" />
+
       <div className="pointer-events-none absolute -bottom-24 -right-20 h-60 w-60 rounded-full bg-violet-600/15 blur-[90px]" />
 
       <div className="relative z-10">
-        {/* Center Logo */}
-        <div className="mb-5 flex flex-col items-center text-center">
+        {/* ====================================
+            UNIVERSITY BRANDING
+        ==================================== */}
+
+        <div className="mb-6 flex flex-col items-center text-center">
           <img
             src={campusLogo}
             alt="AMIOUT Logo"
@@ -220,20 +296,26 @@ const LoginCard = () => {
           </p>
         </div>
 
-        {/* Welcome Heading */}
-        <div className="mb-6 text-center">
+        {/* ====================================
+            WELCOME SECTION
+        ==================================== */}
+
+        <div className="mb-7 text-center">
           <h3 className="text-2xl font-extrabold sm:text-[28px]">
             Welcome Back
           </h3>
 
-          <p className="mt-2 text-sm text-slate-400">
-            Sign in with your university email to continue
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Sign in with your university credentials
           </p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
+        {/* ====================================
+            LOGIN FORM
+        ==================================== */}
+
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          {/* EMAIL ADDRESS */}
           <div>
             <label
               htmlFor="login-email"
@@ -242,7 +324,7 @@ const LoginCard = () => {
               University Email Address
             </label>
 
-            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition focus-within:border-cyan-400/70">
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all duration-200 focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
               <Mail className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
 
               <input
@@ -253,14 +335,16 @@ const LoginCard = () => {
                 onChange={handleChange}
                 placeholder="Enter your university email"
                 autoComplete="username"
-                required
+                autoCapitalize="none"
+                spellCheck={false}
                 disabled={loading}
-                className="w-full min-w-0 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
+                aria-required="true"
+                className="w-full min-w-0 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500 disabled:opacity-60"
               />
             </div>
           </div>
 
-          {/* Password */}
+          {/* PASSWORD */}
           <div>
             <div className="mb-2 flex items-center justify-between gap-3">
               <label
@@ -272,13 +356,13 @@ const LoginCard = () => {
 
               <Link
                 to="/forgot-password"
-                className="text-xs font-semibold text-cyan-400 hover:text-cyan-300"
+                className="text-xs font-semibold text-cyan-400 transition hover:text-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400"
               >
                 Forgot Password?
               </Link>
             </div>
 
-            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition focus-within:border-cyan-400/70">
+            <div className="flex items-center rounded-xl border border-white/15 bg-[#111e34]/80 transition-all duration-200 focus-within:border-cyan-400/70 focus-within:ring-2 focus-within:ring-cyan-400/10">
               <LockKeyhole className="ml-4 h-5 w-5 shrink-0 text-cyan-400" />
 
               <input
@@ -289,16 +373,18 @@ const LoginCard = () => {
                 onChange={handleChange}
                 placeholder="Enter your password"
                 autoComplete="current-password"
-                required
                 disabled={loading}
-                className="min-w-0 flex-1 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500"
+                aria-required="true"
+                className="min-w-0 flex-1 bg-transparent px-4 py-3.5 text-sm text-white outline-none placeholder:text-slate-500 disabled:opacity-60"
               />
 
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+                onClick={() => setShowPassword((previous) => !previous)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="mr-4 text-slate-400 hover:text-white"
+                aria-pressed={showPassword}
+                disabled={loading}
+                className="mr-4 rounded-md text-slate-400 transition hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:opacity-50"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -309,8 +395,8 @@ const LoginCard = () => {
             </div>
           </div>
 
-          {/* Remember Me */}
-          <label className="flex cursor-pointer items-center gap-3">
+          {/* REMEMBER ME */}
+          <label className="flex w-fit cursor-pointer items-center gap-3">
             <input
               type="checkbox"
               name="remember"
@@ -323,17 +409,18 @@ const LoginCard = () => {
             <span className="text-sm text-slate-300">Remember me</span>
           </label>
 
-          {/* Sign In */}
+          {/* SIGN IN BUTTON */}
           <motion.button
-            whileHover={{ scale: 1.015 }}
-            whileTap={{ scale: 0.985 }}
+            whileHover={loading ? undefined : { scale: 1.015 }}
+            whileTap={loading ? undefined : { scale: 0.985 }}
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-blue-500/25 transition disabled:cursor-not-allowed disabled:opacity-60"
+            aria-busy={loading}
+            className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 py-3.5 font-bold text-white shadow-lg shadow-blue-500/25 transition-all duration-200 hover:shadow-blue-500/35 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <LoaderCircle className="h-5 w-5 animate-spin" />
                 Signing In...
               </>
             ) : (
@@ -345,42 +432,20 @@ const LoginCard = () => {
           </motion.button>
         </form>
 
-        {/* Divider */}
-        <div className="my-5 flex items-center gap-4">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="text-xs text-slate-500">OR</span>
-          <div className="h-px flex-1 bg-white/10" />
+        {/* ====================================
+            SECURITY FOOTER
+        ==================================== */}
+
+        <div className="mt-7 flex items-center justify-center gap-2 border-t border-white/10 pt-5 text-center">
+          <ShieldCheck
+            className="h-4 w-4 shrink-0 text-emerald-400"
+            aria-hidden="true"
+          />
+
+          <p className="text-xs text-slate-400">
+            Secure University Authentication
+          </p>
         </div>
-
-        {/* Activate Account */}
-        <div className="rounded-xl border border-white/15 bg-white/[0.035] px-4 py-3.5 text-center">
-          <p className="text-sm text-slate-300">First time using AMIOUT?</p>
-
-          <Link
-            to="/activate-account"
-            className="mt-1.5 inline-flex items-center gap-2 text-sm font-bold text-cyan-300 transition hover:text-cyan-200"
-          >
-            Activate Your Account
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        {/* Role Labels */}
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {roleItems.map(({ label, icon: Icon, color }) => (
-            <div
-              key={label}
-              className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2 py-2.5 text-xs font-medium text-slate-200"
-            >
-              <Icon className={`h-4 w-4 ${color}`} />
-              {label}
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-4 text-center text-xs leading-5 text-slate-400">
-          One secure login for Students, Faculty, Administration and Security.
-        </p>
       </div>
     </div>
   );
